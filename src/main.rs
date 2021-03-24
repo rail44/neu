@@ -1,4 +1,5 @@
 use core::cmp::min;
+use termion::terminal_size;
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
@@ -21,6 +22,7 @@ enum Mode {
 }
 
 struct Editor {
+    size: (u16, u16),
     mode: Mode,
     cursor: Cursor,
     buffer: Vec<Vec<char>>,
@@ -35,8 +37,9 @@ impl Default for Editor {
 
         let mut stdout = stdout().into_raw_mode().unwrap();
         write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+        let size = terminal_size().unwrap();
 
-        Editor { mode, cursor, buffer, stdout }
+        Editor { mode, size, cursor, buffer, stdout }
     }
 }
 
@@ -55,6 +58,15 @@ impl Editor {
             }
             write!(self.stdout, "\r\n").unwrap();
         }
+        write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1)).unwrap();
+        match self.mode {
+            Mode::Normal => {
+                write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
+            },
+            Mode::Insert => {
+                write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
+            }
+        };
         write!(self.stdout, "{}", termion::cursor::Goto(self.cursor.col as u16 + 1, self.cursor.row as u16 + 1)).unwrap();
         self.stdout.flush().unwrap();
     }
