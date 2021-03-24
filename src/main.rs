@@ -1,5 +1,7 @@
 use core::cmp::min;
-use std::io::{stdin, stdout, Stdout, Write};
+use std::io::{stdin, stdout, Stdout, Write, BufWriter};
+use std::fs::File;
+
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
@@ -115,9 +117,20 @@ impl Editor {
                 self.mode = Mode::Insert;
             }
             Key::Char('a') => {
+                self.cursor.col = min(self.cursor.col + 1, self.buffer[self.cursor.row].len());
                 self.mode = Mode::Insert;
             }
             Key::Ctrl('q') => return Signal::Quit,
+            Key::Ctrl('w') => {
+                let f = File::create("/tmp/hoge").unwrap();
+                let mut w = BufWriter::new(f);
+                for line in &self.buffer {
+                    for c in line {
+                        write!(w, "{}", c).unwrap();
+                    }
+                    write!(w, "\r\n").unwrap();
+                }
+            }
             _ => {}
         };
         Signal::Nope
