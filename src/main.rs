@@ -1,9 +1,9 @@
 use core::cmp::min;
-use termion::terminal_size;
+use std::io::{stdin, stdout, Stdout, Write};
 use termion::event::Key;
 use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
-use std::io::{Write, stdout, Stdout, stdin};
+use termion::terminal_size;
 
 struct Cursor {
     row: usize,
@@ -18,7 +18,7 @@ impl Default for Cursor {
 
 enum Mode {
     Normal,
-    Insert
+    Insert,
 }
 
 struct Editor {
@@ -31,22 +31,35 @@ struct Editor {
 
 impl Default for Editor {
     fn default() -> Self {
-        let buffer: Vec<Vec<char>> = vec![vec!['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']];
+        let buffer: Vec<Vec<char>> =
+            vec![vec!['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']];
         let cursor = Cursor::default();
         let mode = Mode::Normal;
 
         let mut stdout = stdout().into_raw_mode().unwrap();
-        write!(stdout, "{}{}", termion::clear::All, termion::cursor::Goto(1, 1)).unwrap();
+        write!(
+            stdout,
+            "{}{}",
+            termion::clear::All,
+            termion::cursor::Goto(1, 1)
+        )
+        .unwrap();
         let size = terminal_size().unwrap();
 
-        Editor { mode, size, cursor, buffer, stdout }
+        Editor {
+            mode,
+            size,
+            cursor,
+            buffer,
+            stdout,
+        }
     }
 }
 
 #[derive(PartialEq)]
 enum Signal {
     Nope,
-    Quit
+    Quit,
 }
 
 impl Editor {
@@ -62,12 +75,17 @@ impl Editor {
         match self.mode {
             Mode::Normal => {
                 write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
-            },
+            }
             Mode::Insert => {
                 write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
             }
         };
-        write!(self.stdout, "{}", termion::cursor::Goto(self.cursor.col as u16 + 1, self.cursor.row as u16 + 1)).unwrap();
+        write!(
+            self.stdout,
+            "{}",
+            termion::cursor::Goto(self.cursor.col as u16 + 1, self.cursor.row as u16 + 1)
+        )
+        .unwrap();
         self.stdout.flush().unwrap();
     }
 
@@ -120,13 +138,13 @@ impl Editor {
                 }
                 self.buffer[self.cursor.row].insert(self.cursor.col, c);
                 self.cursor.col += 1;
-            },
+            }
             Key::Esc => {
                 self.mode = Mode::Normal;
-            },
+            }
             Key::Ctrl('c') => {
                 self.mode = Mode::Normal;
-            },
+            }
             _ => {}
         }
     }
@@ -135,10 +153,7 @@ impl Editor {
         self.draw();
         let stdin = stdin();
         for c in stdin.keys() {
-            write!(self.stdout,
-                "{}",
-                termion::cursor::Goto(1, 1))
-                .unwrap();
+            write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
             self.stdout.flush().unwrap();
 
             match self.mode {
@@ -146,7 +161,7 @@ impl Editor {
                     if Signal::Quit == self.handle_normal_mode(c.unwrap()) {
                         break;
                     }
-                } ,
+                }
                 Mode::Insert => self.handle_insert_mode(c.unwrap()),
             }
             self.draw();
