@@ -1,7 +1,7 @@
 use std::borrow::Cow;
 use std::ops::Deref;
 
-use xi_rope::{Rope, LinesMetric};
+use xi_rope::{LinesMetric, Rope};
 pub struct Buffer(Rope);
 
 impl Buffer {
@@ -24,6 +24,12 @@ impl Buffer {
 
     pub(crate) fn lines(&self) -> impl Iterator<Item = Cow<'_, str>> + '_ {
         self.0.lines(..)
+    }
+
+    pub(crate) fn remove_line(&mut self, row: usize) {
+        let start = self.0.offset_of_line(row);
+        let end = self.0.offset_of_line(row + 1);
+        self.0.edit(start..end, Rope::from(""));
     }
 
     pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
