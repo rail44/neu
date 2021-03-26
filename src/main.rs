@@ -7,6 +7,9 @@ use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::terminal_size;
 
+mod buffer;
+use crate::buffer::Buffer;
+
 struct Cursor {
     row: usize,
     col: usize,
@@ -21,37 +24,6 @@ impl Default for Cursor {
 enum Mode {
     Normal,
     Insert,
-}
-
-struct Buffer(Vec<Vec<char>>);
-
-impl Buffer {
-    fn new() -> Self {
-        Buffer(vec![vec![
-            'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd',
-        ]])
-    }
-
-    fn row_len(&self, row: usize) -> usize {
-        self.0[row].len()
-    }
-
-    fn count_lines(&self) -> usize {
-        self.0.len()
-    }
-
-    fn lines(&self) -> impl Iterator<Item = &Vec<char>> + '_ {
-        self.0.iter()
-    }
-
-    fn insert_return(&mut self, col: usize, row: usize) {
-        let rest: Vec<char> = self.0[row].drain(col..).collect();
-        self.0.insert(row + 1, rest);
-    }
-
-    fn insert_char(&mut self, col: usize, row: usize, c: char) {
-        self.0[row].insert(col, c);
-    }
 }
 
 struct Editor {
@@ -97,9 +69,7 @@ impl Editor {
     fn draw(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         for line in self.buffer.lines() {
-            for c in line {
-                write!(self.stdout, "{}", c).unwrap();
-            }
+            write!(self.stdout, "{}", line).unwrap();
             write!(self.stdout, "\r\n").unwrap();
         }
         write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1)).unwrap();
@@ -128,7 +98,7 @@ impl Editor {
                 }
             }
             Key::Char('j') => {
-                if self.cursor.row + 1 < self.buffer.count_lines() {
+                if self.cursor.row + 1 < self.buffer.lines().count() {
                     self.cursor.row += 1;
                     self.cursor.col = min(self.buffer.row_len(self.cursor.row), self.cursor.col);
                 }
@@ -153,12 +123,7 @@ impl Editor {
             Key::Ctrl('w') => {
                 let f = File::create("/tmp/hoge").unwrap();
                 let mut w = BufWriter::new(f);
-                for line in self.buffer.lines() {
-                    for c in line {
-                        write!(w, "{}", c).unwrap();
-                    }
-                    write!(w, "\r\n").unwrap();
-                }
+                write!(w, "{}", self.buffer.as_str()).unwrap();
             }
             _ => {}
         };
@@ -169,7 +134,7 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.buffer.insert_return(self.cursor.col, self.cursor.row);
+                    self.buffer.insert_char(self.cursor.col, self.cursor.row, '\n');
                     self.cursor.row += 1;
                     self.cursor.col = 0;
                     // scroll();
