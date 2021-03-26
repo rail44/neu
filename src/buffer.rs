@@ -6,7 +6,7 @@ pub struct Buffer(Rope);
 
 impl Buffer {
     pub(crate) fn new() -> Self {
-        Buffer(Rope::from("Hello World"))
+        Buffer(Rope::from("Hello World\n"))
     }
 
     pub(crate) fn row_len(&self, row: usize) -> usize {
@@ -26,10 +26,26 @@ impl Buffer {
         self.0.lines(..)
     }
 
-    pub(crate) fn remove_line(&mut self, row: usize) {
+    pub(crate) fn remove_line(&mut self, row: usize) -> Rope {
         let start = self.0.offset_of_line(row);
         let end = self.0.offset_of_line(row + 1);
-        self.0.edit(start..end, Rope::from(""));
+        let range = start..end;
+        let seq = self.0.subseq(range.clone());
+        self.0.edit(range, Rope::from(""));
+        seq
+    }
+
+    pub(crate) fn subseq_line(&self, row: usize) -> Rope {
+        let start = self.0.offset_of_line(row);
+        let end = self.0.offset_of_line(row + 1);
+        let range = start..end;
+        self.0.subseq(range)
+    }
+
+    pub(crate) fn insert(&mut self, col: usize, row: usize, rope: Rope) {
+        let offset = self.0.offset_of_line(row);
+        let start = offset + col;
+        self.0.edit(start..start, rope);
     }
 
     pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
