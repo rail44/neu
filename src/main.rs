@@ -90,40 +90,46 @@ impl Editor {
         self.stdout.flush().unwrap();
     }
 
-    fn handle_normal_mode(&mut self, k: Key) -> Signal {
-        match k {
-            Key::Char('h') => {
-                if self.cursor.col > 0 {
-                    self.cursor.col -= 1;
-                }
+    fn handle_normal_mode(&mut self, cmd: &mut Vec<Key>) -> Signal {
+        match cmd.as_slice() {
+            [Key::Char('h')] => {
+                self.cursor.col = self.cursor.col.saturating_sub(1);
+                cmd.clear();
             }
-            Key::Char('j') => {
-                if self.cursor.row + 1 < self.buffer.lines().count() {
-                    self.cursor.row += 1;
-                    self.cursor.col = min(self.buffer.row_len(self.cursor.row), self.cursor.col);
-                }
+            [Key::Char('j')] => {
+                self.cursor.row += 1;
+                cmd.clear();
             }
-            Key::Char('k') => {
-                if self.cursor.row > 0 {
-                    self.cursor.row -= 1;
-                    self.cursor.col = min(self.buffer.row_len(self.cursor.row), self.cursor.col);
-                }
+            [Key::Char('k')] => {
+                self.cursor.row = self.cursor.row.saturating_sub(1);
+                cmd.clear();
             }
-            Key::Char('l') => {
-                self.cursor.col = min(self.cursor.col + 1, self.buffer.row_len(self.cursor.row));
+            [Key::Char('l')] => {
+                self.cursor.col += 1;
+                cmd.clear();
             }
-            Key::Char('i') => {
+            [Key::Char('i')] => {
                 self.mode = Mode::Insert;
+                cmd.clear();
             }
-            Key::Char('a') => {
-                self.cursor.col = min(self.cursor.col + 1, self.buffer.row_len(self.cursor.row));
+            [Key::Char('a')] => {
+                self.cursor.col += 1;
                 self.mode = Mode::Insert;
+                cmd.clear();
             }
-            Key::Ctrl('q') => return Signal::Quit,
-            Key::Ctrl('w') => {
+            [Key::Ctrl('q')] => return Signal::Quit,
+            [Key::Ctrl('w')] => {
                 let f = File::create("/tmp/hoge").unwrap();
                 let mut w = BufWriter::new(f);
                 write!(w, "{}", self.buffer.as_str()).unwrap();
+                cmd.clear();
+            }
+            [Key::Char('d'), Key::Char('d')] => {
+                self.buffer.remove_line(self.cursor.row);
+                cmd.clear();
+            }
+            [.., Key::Esc] | [.., Key::Ctrl('c')] => {
+                cmd.clear();
             }
             _ => {}
         };
@@ -134,7 +140,8 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.buffer.insert_char(self.cursor.col, self.cursor.row, '\n');
+                    self.buffer
+                        .insert_char(self.cursor.col, self.cursor.row, '\n');
                     self.cursor.row += 1;
                     self.cursor.col = 0;
                     // scroll();
@@ -143,10 +150,7 @@ impl Editor {
                 self.buffer.insert_char(self.cursor.col, self.cursor.row, c);
                 self.cursor.col += 1;
             }
-            Key::Esc => {
-                self.mode = Mode::Normal;
-            }
-            Key::Ctrl('c') => {
+            Key::Esc | Key::Ctrl('c') => {
                 self.mode = Mode::Normal;
             }
             _ => {}
@@ -156,18 +160,23 @@ impl Editor {
     fn run(&mut self) {
         self.draw();
         let stdin = stdin();
+        let mut cmd = Vec::new();
         for c in stdin.keys() {
             write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
             self.stdout.flush().unwrap();
 
             match self.mode {
                 Mode::Normal => {
-                    if Signal::Quit == self.handle_normal_mode(c.unwrap()) {
+                    cmd.push(c.unwrap());
+                    let signal = self.handle_normal_mode(&mut cmd);
+                    if Signal::Quit == signal {
                         break;
                     }
                 }
                 Mode::Insert => self.handle_insert_mode(c.unwrap()),
             }
+            self.cursor.row = min(self.cursor.row, self.buffer.lines().count() - 1);
+            self.cursor.col = min(self.cursor.col, self.buffer.row_len(self.cursor.row));
             self.draw();
         }
     }
