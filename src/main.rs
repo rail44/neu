@@ -1,6 +1,6 @@
 use core::cmp::min;
-use std::io::{stdin, stdout, Stdout, Write, BufWriter};
 use std::fs::File;
+use std::io::{stdin, stdout, BufWriter, Stdout, Write};
 
 use termion::event::Key;
 use termion::input::TermRead;
@@ -23,18 +23,47 @@ enum Mode {
     Insert,
 }
 
+struct Buffer(Vec<Vec<char>>);
+
+impl Buffer {
+    fn new() -> Self {
+        Buffer(vec![vec![
+            'h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd',
+        ]])
+    }
+
+    fn row_len(&self, row: usize) -> usize {
+        self.0[row].len()
+    }
+
+    fn count_lines(&self) -> usize {
+        self.0.len()
+    }
+
+    fn lines(&self) -> impl Iterator<Item = &Vec<char>> + '_ {
+        self.0.iter()
+    }
+
+    fn insert_return(&mut self, col: usize, row: usize) {
+        let rest: Vec<char> = self.0[row].drain(col..).collect();
+        self.0.insert(row + 1, rest);
+    }
+
+    fn insert_char(&mut self, col: usize, row: usize, c: char) {
+        self.0[row].insert(col, c);
+    }
+}
+
 struct Editor {
     size: (u16, u16),
     mode: Mode,
     cursor: Cursor,
-    buffer: Vec<Vec<char>>,
+    buffer: Buffer,
     stdout: RawTerminal<Stdout>,
 }
 
 impl Default for Editor {
     fn default() -> Self {
-        let buffer: Vec<Vec<char>> =
-            vec![vec!['h', 'e', 'l', 'l', 'o', ' ', 'w', 'o', 'r', 'l', 'd']];
         let cursor = Cursor::default();
         let mode = Mode::Normal;
 
@@ -52,7 +81,7 @@ impl Default for Editor {
             mode,
             size,
             cursor,
-            buffer,
+            buffer: Buffer::new(),
             stdout,
         }
     }
@@ -67,7 +96,7 @@ enum Signal {
 impl Editor {
     fn draw(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-        for line in &self.buffer {
+        for line in self.buffer.lines() {
             for c in line {
                 write!(self.stdout, "{}", c).unwrap();
             }
@@ -99,32 +128,32 @@ impl Editor {
                 }
             }
             Key::Char('j') => {
-                if self.cursor.row + 1 < self.buffer.len() {
+                if self.cursor.row + 1 < self.buffer.count_lines() {
                     self.cursor.row += 1;
-                    self.cursor.col = min(self.buffer[self.cursor.row].len(), self.cursor.col);
+                    self.cursor.col = min(self.buffer.row_len(self.cursor.row), self.cursor.col);
                 }
             }
             Key::Char('k') => {
                 if self.cursor.row > 0 {
                     self.cursor.row -= 1;
-                    self.cursor.col = min(self.buffer[self.cursor.row].len(), self.cursor.col);
+                    self.cursor.col = min(self.buffer.row_len(self.cursor.row), self.cursor.col);
                 }
             }
             Key::Char('l') => {
-                self.cursor.col = min(self.cursor.col + 1, self.buffer[self.cursor.row].len());
+                self.cursor.col = min(self.cursor.col + 1, self.buffer.row_len(self.cursor.row));
             }
             Key::Char('i') => {
                 self.mode = Mode::Insert;
             }
             Key::Char('a') => {
-                self.cursor.col = min(self.cursor.col + 1, self.buffer[self.cursor.row].len());
+                self.cursor.col = min(self.cursor.col + 1, self.buffer.row_len(self.cursor.row));
                 self.mode = Mode::Insert;
             }
             Key::Ctrl('q') => return Signal::Quit,
             Key::Ctrl('w') => {
                 let f = File::create("/tmp/hoge").unwrap();
                 let mut w = BufWriter::new(f);
-                for line in &self.buffer {
+                for line in self.buffer.lines() {
                     for c in line {
                         write!(w, "{}", c).unwrap();
                     }
@@ -140,16 +169,13 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    let rest: Vec<char> = self.buffer[self.cursor.row]
-                        .drain(self.cursor.col..)
-                        .collect();
-                    self.buffer.insert(self.cursor.row + 1, rest);
+                    self.buffer.insert_return(self.cursor.col, self.cursor.row);
                     self.cursor.row += 1;
                     self.cursor.col = 0;
                     // scroll();
                     return;
                 }
-                self.buffer[self.cursor.row].insert(self.cursor.col, c);
+                self.buffer.insert_char(self.cursor.col, self.cursor.row, c);
                 self.cursor.col += 1;
             }
             Key::Esc => {
