@@ -2,7 +2,7 @@ use std::borrow::Cow;
 use std::ops::Deref;
 
 use xi_rope::{LinesMetric, Rope};
-pub struct Buffer(Rope);
+pub(crate) struct Buffer(Rope);
 
 impl Buffer {
     pub(crate) fn new() -> Self {
