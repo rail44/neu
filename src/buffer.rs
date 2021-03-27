@@ -78,6 +78,16 @@ impl Buffer {
     pub(crate) fn slice_as_str<I: IntervalBounds>(&self, range: I) -> Cow<str> {
         self.0.slice_to_cow(range)
     }
+
+    pub(crate) fn last_char(&self) -> Option<char> {
+        let offset = self.count_chars();
+        let s = self.slice_as_str(offset-1..offset);
+        s.chars().last()
+    }
+
+    pub(crate) fn end_with_line_break(&self) -> bool {
+        self.last_char().map(|c| c == '\n').unwrap_or(false)
+    }
 }
 
 impl From<Rope> for Buffer {
