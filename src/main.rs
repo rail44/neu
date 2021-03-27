@@ -135,7 +135,7 @@ impl Editor {
                 self.mode = Mode::Insert;
                 self.cmd.clear();
             }
-            Quit => { return Signal::Quit },
+            Quit => return Signal::Quit,
             RemoveLine => {
                 self.yanked = self.buffer.remove_line(self.cursor.row);
                 self.cmd.clear();
@@ -192,9 +192,9 @@ impl Editor {
                 Mode::Normal => {
                     match k.unwrap() {
                         Key::Char(c) => self.cmd.push(c),
-                        Key::Ctrl(c) => self.cmd.push_str(&mut format!("<C-{}>", c)),
+                        Key::Ctrl(c) => self.cmd.push_str(&format!("<C-{}>", c)),
                         Key::Esc => self.cmd.push_str("<Esc>"),
-                        _ => {},
+                        _ => {}
                     };
                     let signal = self.handle_normal_mode();
                     if Signal::Quit == signal {
