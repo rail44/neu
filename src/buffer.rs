@@ -81,7 +81,7 @@ impl Buffer {
 
     pub(crate) fn last_char(&self) -> Option<char> {
         let offset = self.count_chars();
-        let s = self.slice_as_str(offset-1..offset);
+        let s = self.slice_as_str(offset - 1..offset);
         s.chars().last()
     }
 

@@ -147,7 +147,8 @@ impl Editor {
                     self.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.buffer.insert(col, self.cursor.row, self.yanked.clone());
+                    self.buffer
+                        .insert(col, self.cursor.row, self.yanked.clone());
                 }
             }
             InsertYank => {
@@ -157,7 +158,8 @@ impl Editor {
                     self.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.buffer.insert(col, self.cursor.row, self.yanked.clone());
+                    self.buffer
+                        .insert(col, self.cursor.row, self.yanked.clone());
                 }
             }
             Escape => {}
