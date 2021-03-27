@@ -127,7 +127,6 @@ impl Editor {
                     self.cmd.clear();
                 }
                 IntoInsertMode => {
-                    self.cursor.col += 1;
                     self.mode = Mode::Insert;
                     self.cmd.clear();
                 }
