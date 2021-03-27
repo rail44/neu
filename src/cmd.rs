@@ -1,10 +1,6 @@
 use nom::{
-    IResult,
-    combinator::map,
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::anychar,
-    multi::many_till,
+    branch::alt, bytes::complete::tag, character::complete::anychar, combinator::map,
+    multi::many_till, IResult,
 };
 
 pub(crate) struct Cmd {
@@ -41,14 +37,16 @@ fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
         map(tag("yy"), |_| YankLine),
         map(tag("p"), |_| AppendYank),
         map(tag("P"), |_| InsertYank),
-        map(many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))), |_| Escape),
+        map(
+            many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
+            |_| Escape,
+        ),
     ))(input)
 }
 
 fn cmd(input: &str) -> IResult<&str, Cmd> {
     map(cmd_kind, |kind| Cmd { count: 1, kind })(input)
 }
-
 
 pub(crate) fn parse(input: &str) -> IResult<&str, Cmd> {
     cmd(input)
