@@ -7,8 +7,6 @@ use termion::input::TermRead;
 use termion::raw::{IntoRawMode, RawTerminal};
 use termion::terminal_size;
 
-use xi_rope::Rope;
-
 mod buffer;
 mod cmd;
 use crate::buffer::Buffer;
@@ -35,7 +33,7 @@ struct Editor {
     cursor: Cursor,
     buffer: Buffer,
     stdout: RawTerminal<Stdout>,
-    yanked: Rope,
+    yanked: Buffer,
     cmd: String,
 }
 
@@ -56,10 +54,10 @@ impl Default for Editor {
         Editor {
             mode,
             size,
-            cursor: Cursor::default(),
-            buffer: Buffer::new(),
             stdout,
-            yanked: Rope::default(),
+            buffer: Buffer::new(),
+            cursor: Cursor::default(),
+            yanked: Buffer::default(),
             cmd: String::new(),
         }
     }
@@ -129,7 +127,9 @@ impl Editor {
                 self.mode = Mode::Insert;
             }
             RemoveChar => {
-                self.yanked = self.buffer.remove_chars(self.cursor.col, self.cursor.row, cmd.count);
+                self.yanked = self
+                    .buffer
+                    .remove_chars(self.cursor.col, self.cursor.row, cmd.count);
             }
             Quit => return Signal::Quit,
             RemoveLine => {
