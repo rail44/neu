@@ -51,6 +51,16 @@ impl Buffer {
         self.0.edit(start..start, rope);
     }
 
+    pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Rope {
+        let offset = self.0.offset_of_line(row);
+        let start = offset + col;
+        let end = start + count;
+        let range = start..end;
+        let seq = self.0.subseq(range.clone());
+        self.0.edit(range, Rope::default());
+        seq
+    }
+
     pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
         let offset = self.0.offset_of_line(row);
         let start = offset + col;
