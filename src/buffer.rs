@@ -1,3 +1,4 @@
+use core::cmp::min;
 use std::borrow::Cow;
 use std::ops::Deref;
 
@@ -26,18 +27,20 @@ impl Buffer {
         self.0.lines(..)
     }
 
-    pub(crate) fn remove_line(&mut self, row: usize) -> Rope {
+    pub(crate) fn remove_lines(&mut self, row: usize, count: usize) -> Rope {
         let start = self.0.offset_of_line(row);
-        let end = self.0.offset_of_line(row + 1);
+        let end_line = min(row + count, self.count_lines());
+        let end = self.0.offset_of_line(end_line);
         let range = start..end;
         let seq = self.0.subseq(range.clone());
         self.0.edit(range, Rope::from(""));
         seq
     }
 
-    pub(crate) fn subseq_line(&self, row: usize) -> Rope {
+    pub(crate) fn subseq_lines(&self, row: usize, count: usize) -> Rope {
         let start = self.0.offset_of_line(row);
-        let end = self.0.offset_of_line(row + 1);
+        let end_line = min(row + count, self.count_lines());
+        let end = self.0.offset_of_line(end_line);
         let range = start..end;
         self.0.subseq(range)
     }
