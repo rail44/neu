@@ -23,8 +23,24 @@ impl Default for Cursor {
 }
 
 enum Mode {
-    Normal,
+    Normal(String),
     Insert,
+}
+
+impl Mode {
+    fn get_mut_cmd(&mut self) -> &mut String {
+        if let Mode::Normal(ref mut cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
+
+    fn get_cmd(&self) -> &String {
+        if let Mode::Normal(cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
 }
 
 struct Editor {
@@ -34,12 +50,11 @@ struct Editor {
     buffer: Buffer,
     stdout: RawTerminal<Stdout>,
     yanked: Buffer,
-    cmd: String,
 }
 
 impl Default for Editor {
     fn default() -> Self {
-        let mode = Mode::Normal;
+        let mode = Mode::Normal(String::new());
 
         let mut stdout = stdout().into_raw_mode().unwrap();
         write!(
@@ -58,7 +73,6 @@ impl Default for Editor {
             buffer: Buffer::new(),
             cursor: Cursor::default(),
             yanked: Buffer::default(),
-            cmd: String::new(),
         }
     }
 }
@@ -77,9 +91,9 @@ impl Editor {
             write!(self.stdout, "\r\n").unwrap();
         }
         write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1)).unwrap();
-        match self.mode {
-            Mode::Normal => {
-                if self.cmd.is_empty() {
+        match &self.mode {
+            Mode::Normal(cmd) => {
+                if cmd.is_empty() {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
                 } else {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyUnderline).unwrap();
@@ -99,7 +113,7 @@ impl Editor {
     }
 
     fn handle_normal_mode(&mut self) -> Signal {
-        let parsed = cmd::parse(&self.cmd);
+        let parsed = cmd::parse(self.mode.get_cmd());
         if parsed.is_err() {
             return Signal::Nope;
         }
@@ -164,7 +178,7 @@ impl Editor {
             }
             Escape => {}
         }
-        self.cmd.clear();
+        self.mode.get_mut_cmd().clear();
         Signal::Nope
     }
 
@@ -183,7 +197,7 @@ impl Editor {
                 self.cursor.col += 1;
             }
             Key::Esc | Key::Ctrl('c') => {
-                self.mode = Mode::Normal;
+                self.mode = Mode::Normal(String::new());
             }
             _ => {}
         }
@@ -196,12 +210,12 @@ impl Editor {
             write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
             self.stdout.flush().unwrap();
 
-            match self.mode {
-                Mode::Normal => {
+            match &mut self.mode {
+                Mode::Normal(cmd) => {
                     match k.unwrap() {
-                        Key::Char(c) => self.cmd.push(c),
-                        Key::Ctrl(c) => self.cmd.push_str(&format!("<C-{}>", c)),
-                        Key::Esc => self.cmd.push_str("<Esc>"),
+                        Key::Char(c) => cmd.push(c),
+                        Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
+                        Key::Esc => cmd.push_str("<Esc>"),
                         _ => {}
                     };
                     let signal = self.handle_normal_mode();
