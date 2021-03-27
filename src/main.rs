@@ -92,7 +92,7 @@ impl Editor {
             write!(self.stdout, "{}", line).unwrap();
             write!(self.stdout, "\r\n").unwrap();
         }
-        write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1)).unwrap();
+        write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1 - 1)).unwrap();
         match &self.mode {
             Mode::Normal(cmd) => {
                 if cmd.is_empty() {
@@ -105,10 +105,14 @@ impl Editor {
                 write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
             }
             Mode::CmdLine(cmd) => {
-                write!(self.stdout, "{}COMMAND", termion::cursor::SteadyBlock).unwrap();
-                if cmd.is_empty() {
-                } else {
-                }
+                write!(
+                    self.stdout,
+                    "{}COMMAND{}:{}",
+                    termion::cursor::SteadyBlock,
+                    termion::cursor::Goto(0, self.size.1),
+                    cmd
+                )
+                .unwrap();
             }
         };
         write!(
@@ -120,10 +124,10 @@ impl Editor {
         self.stdout.flush().unwrap();
     }
 
-    fn handle_normal_mode(&mut self) -> Signal {
+    fn handle_normal_mode(&mut self) {
         let parsed = cmd::parse(self.mode.get_cmd());
         if parsed.is_err() {
-            return Signal::Nope;
+            return;
         }
         let (_, cmd) = parsed.unwrap();
 
@@ -156,7 +160,6 @@ impl Editor {
                     .buffer
                     .remove_chars(self.cursor.col, self.cursor.row, cmd.count);
             }
-            Quit => return Signal::Quit,
             RemoveLine => {
                 self.yanked = self.buffer.remove_lines(self.cursor.row, cmd.count);
             }
@@ -192,13 +195,13 @@ impl Editor {
         if let Mode::Normal(ref mut cmd) = self.mode {
             cmd.clear();
         }
-        Signal::Nope
     }
 
-    fn handle_cmd_line_mode(&mut self) {
+    fn handle_cmd_line_mode(&mut self) -> Signal {
         let parsed = cmdline::parse(self.mode.get_cmdline());
         if parsed.is_err() {
-            return;
+            self.mode = Mode::Normal(String::new());
+            return Signal::Nope;
         }
         let (_, cmd) = parsed.unwrap();
 
@@ -209,8 +212,10 @@ impl Editor {
                 let mut w = BufWriter::new(f);
                 write!(w, "{}", self.buffer.as_str()).unwrap();
             }
+            Quit => return Signal::Quit,
         }
         self.mode = Mode::Normal(String::new());
+        Signal::Nope
     }
 
     fn handle_insert_mode(&mut self, k: Key) {
@@ -249,16 +254,21 @@ impl Editor {
                         Key::Esc => cmd.push_str("<Esc>"),
                         _ => {}
                     };
-                    let signal = self.handle_normal_mode();
-                    if Signal::Quit == signal {
-                        break;
-                    }
+                    self.handle_normal_mode();
                 }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()),
                 Mode::CmdLine(cmd) => {
                     match k.unwrap() {
-                        Key::Char('\n') => self.handle_cmd_line_mode(),
+                        Key::Char('\n') => {
+                            let signal = self.handle_cmd_line_mode();
+                            if Signal::Quit == signal {
+                                break;
+                            }
+                        }
                         Key::Char(c) => cmd.push(c),
+                        Key::Backspace => {
+                            cmd.pop();
+                        }
                         Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
                         Key::Esc => cmd.push_str("<Esc>"),
                         _ => {}

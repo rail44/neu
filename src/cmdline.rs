@@ -10,14 +10,18 @@ use nom::{
 
 pub(crate) enum Cmd {
     Write(String),
+    Quit,
 }
 
 fn cmd(input: &str) -> IResult<&str, Cmd> {
     use Cmd::*;
-    map(
-        separated_pair(tag("w"), space1, many0(anychar)),
-        |(_, arg)| Write(arg.iter().collect()),
-    )(input)
+    alt((
+        map(
+            separated_pair(tag("w"), space1, many0(anychar)),
+            |(_, arg)| Write(arg.iter().collect()),
+        ),
+        map(tag("q"), |_| Quit),
+    ))(input)
 }
 
 pub(crate) fn parse(input: &str) -> IResult<&str, Cmd> {
