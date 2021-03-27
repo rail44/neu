@@ -158,7 +158,7 @@ impl Editor {
                     self.cmd.clear();
                 }
             }
-        };
+        }
         Signal::Nope
     }
 
