@@ -108,53 +108,55 @@ impl Editor {
         let (_, cmd) = parsed.unwrap();
 
         use cmd::CmdKind::*;
-        match cmd.kind {
-            CursorLeft => {
-                self.cursor.col = self.cursor.col.saturating_sub(1);
-                self.cmd.clear();
-            }
-            CursorDown => {
-                self.cursor.row += 1;
-                self.cmd.clear();
-            }
-            CursorUp => {
-                self.cursor.row = self.cursor.row.saturating_sub(1);
-                self.cmd.clear();
-            }
-            CursorRight => {
-                self.cursor.col += 1;
-                self.cmd.clear();
-            }
-            IntoInsertMode => {
-                self.cursor.col += 1;
-                self.mode = Mode::Insert;
-                self.cmd.clear();
-            }
-            IntoAppendMode => {
-                self.cursor.col += 1;
-                self.mode = Mode::Insert;
-                self.cmd.clear();
-            }
-            Quit => return Signal::Quit,
-            RemoveLine => {
-                self.yanked = self.buffer.remove_line(self.cursor.row);
-                self.cmd.clear();
-            }
-            YankLine => {
-                self.yanked = self.buffer.subseq_line(self.cursor.row);
-                self.cmd.clear();
-            }
-            AppendYank => {
-                self.cursor.row += 1;
-                self.buffer.insert(0, self.cursor.row, self.yanked.clone());
-                self.cmd.clear();
-            }
-            InsertYank => {
-                self.buffer.insert(0, self.cursor.row, self.yanked.clone());
-                self.cmd.clear();
-            }
-            Escape => {
-                self.cmd.clear();
+        for _ in 0..cmd.count {
+            match cmd.kind {
+                CursorLeft => {
+                    self.cursor.col = self.cursor.col.saturating_sub(1);
+                    self.cmd.clear();
+                }
+                CursorDown => {
+                    self.cursor.row += 1;
+                    self.cmd.clear();
+                }
+                CursorUp => {
+                    self.cursor.row = self.cursor.row.saturating_sub(1);
+                    self.cmd.clear();
+                }
+                CursorRight => {
+                    self.cursor.col += 1;
+                    self.cmd.clear();
+                }
+                IntoInsertMode => {
+                    self.cursor.col += 1;
+                    self.mode = Mode::Insert;
+                    self.cmd.clear();
+                }
+                IntoAppendMode => {
+                    self.cursor.col += 1;
+                    self.mode = Mode::Insert;
+                    self.cmd.clear();
+                }
+                Quit => return Signal::Quit,
+                RemoveLine => {
+                    self.yanked = self.buffer.remove_line(self.cursor.row);
+                    self.cmd.clear();
+                }
+                YankLine => {
+                    self.yanked = self.buffer.subseq_line(self.cursor.row);
+                    self.cmd.clear();
+                }
+                AppendYank => {
+                    self.cursor.row += 1;
+                    self.buffer.insert(0, self.cursor.row, self.yanked.clone());
+                    self.cmd.clear();
+                }
+                InsertYank => {
+                    self.buffer.insert(0, self.cursor.row, self.yanked.clone());
+                    self.cmd.clear();
+                }
+                Escape => {
+                    self.cmd.clear();
+                }
             }
         };
         Signal::Nope

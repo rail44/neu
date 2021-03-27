@@ -1,6 +1,6 @@
 use nom::{
-    branch::alt, bytes::complete::tag, character::complete::anychar, combinator::map,
-    multi::many_till, IResult,
+    branch::alt, bytes::complete::tag, character::complete::{digit0, anychar}, combinator::map,
+    multi::many_till, sequence::pair, IResult,
 };
 
 pub(crate) struct Cmd {
@@ -45,7 +45,10 @@ fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
 }
 
 fn cmd(input: &str) -> IResult<&str, Cmd> {
-    map(cmd_kind, |kind| Cmd { count: 1, kind })(input)
+    map(pair(digit0, cmd_kind), |(n, kind)| {
+        let count = n.parse().unwrap_or_else(|_| 1);
+        Cmd { count, kind }
+    })(input)
 }
 
 pub(crate) fn parse(input: &str) -> IResult<&str, Cmd> {
