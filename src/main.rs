@@ -9,6 +9,7 @@ use termion::terminal_size;
 
 mod buffer;
 mod cmd;
+mod cmdline;
 use crate::buffer::Buffer;
 
 struct Cursor {
@@ -25,18 +26,19 @@ impl Default for Cursor {
 enum Mode {
     Normal(String),
     Insert,
+    CmdLine(String),
 }
 
 impl Mode {
-    fn get_mut_cmd(&mut self) -> &mut String {
-        if let Mode::Normal(ref mut cmd) = self {
+    fn get_cmd(&self) -> &String {
+        if let Mode::Normal(cmd) = self {
             return cmd;
         }
         panic!();
     }
 
-    fn get_cmd(&self) -> &String {
-        if let Mode::Normal(cmd) = self {
+    fn get_cmdline(&self) -> &String {
+        if let Mode::CmdLine(cmd) = self {
             return cmd;
         }
         panic!();
@@ -102,6 +104,12 @@ impl Editor {
             Mode::Insert => {
                 write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
             }
+            Mode::CmdLine(cmd) => {
+                write!(self.stdout, "{}COMMAND", termion::cursor::SteadyBlock).unwrap();
+                if cmd.is_empty() {
+                } else {
+                }
+            }
         };
         write!(
             self.stdout,
@@ -139,6 +147,9 @@ impl Editor {
             IntoAppendMode => {
                 self.cursor.col += 1;
                 self.mode = Mode::Insert;
+            }
+            IntoCmdLineMode => {
+                self.mode = Mode::CmdLine(String::new());
             }
             RemoveChar => {
                 self.yanked = self
@@ -178,8 +189,28 @@ impl Editor {
             }
             Escape => {}
         }
-        self.mode.get_mut_cmd().clear();
+        if let Mode::Normal(ref mut cmd) = self.mode {
+            cmd.clear();
+        }
         Signal::Nope
+    }
+
+    fn handle_cmd_line_mode(&mut self) {
+        let parsed = cmdline::parse(self.mode.get_cmdline());
+        if parsed.is_err() {
+            return;
+        }
+        let (_, cmd) = parsed.unwrap();
+
+        use cmdline::Cmd::*;
+        match cmd {
+            Write(filename) => {
+                let f = File::create(filename).unwrap();
+                let mut w = BufWriter::new(f);
+                write!(w, "{}", self.buffer.as_str()).unwrap();
+            }
+        }
+        self.mode = Mode::Normal(String::new());
     }
 
     fn handle_insert_mode(&mut self, k: Key) {
@@ -224,6 +255,15 @@ impl Editor {
                     }
                 }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()),
+                Mode::CmdLine(cmd) => {
+                    match k.unwrap() {
+                        Key::Char('\n') => self.handle_cmd_line_mode(),
+                        Key::Char(c) => cmd.push(c),
+                        Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
+                        Key::Esc => cmd.push_str("<Esc>"),
+                        _ => {}
+                    };
+                }
             }
             self.cursor.row = min(
                 self.cursor.row,

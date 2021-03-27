@@ -79,6 +79,10 @@ impl Buffer {
         self.0.slice_to_cow(range)
     }
 
+    pub(crate) fn as_str(&self) -> Cow<str> {
+        self.slice_as_str(..)
+    }
+
     pub(crate) fn last_char(&self) -> Option<char> {
         let offset = self.count_chars();
         let s = self.slice_as_str(offset - 1..offset);
