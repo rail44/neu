@@ -139,14 +139,25 @@ impl Editor {
                 self.yanked = self.buffer.subseq_lines(self.cursor.row, cmd.count);
             }
             AppendYank => {
-                self.cursor.row += 1;
+                let col = if self.yanked.end_with_line_break() {
+                    self.cursor.row += 1;
+                    0
+                } else {
+                    self.cursor.col += 1;
+                    self.cursor.col
+                };
                 for _ in 0..cmd.count {
-                    self.buffer.insert(0, self.cursor.row, self.yanked.clone());
+                    self.buffer.insert(col, self.cursor.row, self.yanked.clone());
                 }
             }
             InsertYank => {
+                let col = if self.yanked.end_with_line_break() {
+                    0
+                } else {
+                    self.cursor.col
+                };
                 for _ in 0..cmd.count {
-                    self.buffer.insert(0, self.cursor.row, self.yanked.clone());
+                    self.buffer.insert(col, self.cursor.row, self.yanked.clone());
                 }
             }
             Escape => {}
