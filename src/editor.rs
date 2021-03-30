@@ -268,8 +268,9 @@ impl Editor {
                         Key::Backspace => {
                             cmd.pop();
                         }
-                        Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
-                        Key::Esc => cmd.push_str("<Esc>"),
+                        Key::Esc | Key::Ctrl('c') => {
+                            self.mode = Mode::Normal(String::new());
+                        }
                         _ => {}
                     };
                 }
