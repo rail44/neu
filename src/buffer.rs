@@ -11,7 +11,7 @@ pub(crate) struct Buffer(Rope);
 
 impl Buffer {
     pub(crate) fn new() -> Self {
-        Buffer(Rope::from("Hello World\n"))
+        Buffer(Rope::default())
     }
 
     pub(crate) fn row_len(&self, row: usize) -> usize {
@@ -91,6 +91,12 @@ impl Buffer {
 
     pub(crate) fn end_with_line_break(&self) -> bool {
         self.last_char().map(|c| c == '\n').unwrap_or(false)
+    }
+}
+
+impl From<&str> for Buffer {
+    fn from(s: &str) -> Self {
+        Self(Rope::from(s))
     }
 }
 
