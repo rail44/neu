@@ -32,10 +32,10 @@ pub(crate) enum CmdKind {
 fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
     use CmdKind::*;
     alt((
-        map(tag("h"), |_| CursorLeft),
-        map(tag("j"), |_| CursorDown),
-        map(tag("k"), |_| CursorUp),
-        map(tag("l"), |_| CursorRight),
+        map(alt((tag("h"), tag("<Left>"))), |_| CursorLeft),
+        map(alt((tag("j"), tag("<Down>"))), |_| CursorDown),
+        map(alt((tag("k"), tag("<Up>"))), |_| CursorUp),
+        map(alt((tag("l"), tag("<Right>"))), |_| CursorRight),
         map(tag("i"), |_| IntoInsertMode),
         map(tag("a"), |_| IntoAppendMode),
         map(tag(":"), |_| IntoCmdLineMode),
