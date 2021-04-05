@@ -4,14 +4,26 @@ use std::ops::Deref;
 
 use xi_rope::interval::IntervalBounds;
 use xi_rope::rope::BaseMetric;
-use xi_rope::{LinesMetric, Rope};
+use xi_rope::{Cursor, LinesMetric, Rope};
 
 #[derive(Default, Clone)]
 pub(crate) struct Buffer(Rope);
 
+fn is_alpha(c: &char) -> bool {
+    match c {
+        'a'..='z' | 'A'..='Z' | '_' => true,
+        _ => false,
+    }
+}
+
 impl Buffer {
     pub(crate) fn new() -> Self {
         Buffer(Rope::default())
+    }
+
+    pub(crate) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
+        let offset = self.0.offset_of_line(row);
+        offset + col
     }
 
     pub(crate) fn row_len(&self, row: usize) -> usize {
@@ -54,14 +66,27 @@ impl Buffer {
     }
 
     pub(crate) fn insert(&mut self, col: usize, row: usize, buffer: Buffer) {
-        let offset = self.0.offset_of_line(row);
-        let start = offset + col;
+        let start = self.get_offset_by_cursor(col, row);
         self.0.edit(start..start, buffer);
     }
 
+    pub(crate) fn count_word_forward(&mut self, col: usize, row: usize) -> usize {
+        let start = self.get_offset_by_cursor(col, row);
+        let mut cursor = Cursor::new(&self.0, start);
+
+        let mut i = 0;
+        while let Some(c) = cursor.next_codepoint() {
+            i += 1;
+            if !is_alpha(&c) {
+                return i;
+            }
+        }
+
+        return 0;
+    }
+
     pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Buffer {
-        let offset = self.0.offset_of_line(row);
-        let start = offset + col;
+        let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
         let range = start..end;
         let seq = self.0.subseq(range.clone());
@@ -70,8 +95,7 @@ impl Buffer {
     }
 
     pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
-        let offset = self.0.offset_of_line(row);
-        let start = offset + col;
+        let start = self.get_offset_by_cursor(col, row);
         self.0.edit(start..start, Rope::from(c.to_string()));
     }
 
