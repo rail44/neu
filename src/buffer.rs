@@ -43,8 +43,8 @@ impl Buffer {
         self.0.measure::<BaseMetric>()
     }
 
-    pub(crate) fn lines(&self) -> impl Iterator<Item = Cow<'_, str>> + '_ {
-        self.0.lines(..)
+    pub(crate) fn lines<I: IntervalBounds>(&self, range: I) -> impl Iterator<Item = Cow<'_, str>> + '_ {
+        self.0.lines(range)
     }
 
     pub(crate) fn remove_lines(&mut self, row: usize, count: usize) -> Buffer {
