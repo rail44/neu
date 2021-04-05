@@ -54,6 +54,7 @@ pub(crate) struct Editor {
     size: (u16, u16),
     mode: Mode,
     cursor: Cursor,
+    row_offset: usize,
     buffer: Buffer,
     stdout: RawTerminal<Stdout>,
     yanked: Buffer,
@@ -77,6 +78,7 @@ impl Default for Editor {
             mode,
             size,
             stdout,
+            row_offset: 0,
             buffer: Buffer::new(),
             cursor: Cursor::default(),
             yanked: Buffer::default(),
@@ -87,7 +89,12 @@ impl Default for Editor {
 impl Editor {
     fn draw(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-        for line in self.buffer.lines(..) {
+        for line in self
+            .buffer
+            .lines()
+            .skip(self.row_offset)
+            .take((self.size.1 - 2) as usize)
+        {
             write!(self.stdout, "{}", line).unwrap();
             write!(self.stdout, "\r\n").unwrap();
         }
@@ -295,10 +302,7 @@ impl Editor {
     }
 
     fn coerce_cursor(&mut self) {
-        self.cursor.row = min(
-            self.cursor.row,
-            self.buffer.count_lines().saturating_sub(1),
-        );
+        self.cursor.row = min(self.cursor.row, self.buffer.count_lines().saturating_sub(1));
         self.cursor.col = min(self.cursor.col, self.buffer.row_len(self.cursor.row));
     }
 }
@@ -322,6 +326,7 @@ impl From<Buffer> for Editor {
             size,
             stdout,
             buffer: b,
+            row_offset: 0,
             cursor: Cursor::default(),
             yanked: Buffer::default(),
         }
