@@ -87,7 +87,7 @@ impl Default for Editor {
 impl Editor {
     fn draw(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-        for line in self.buffer.lines() {
+        for line in self.buffer.lines(..) {
             write!(self.stdout, "{}", line).unwrap();
             write!(self.stdout, "\r\n").unwrap();
         }
@@ -289,13 +289,17 @@ impl Editor {
                     };
                 }
             }
-            self.cursor.row = min(
-                self.cursor.row,
-                self.buffer.lines().count().saturating_sub(1),
-            );
-            self.cursor.col = min(self.cursor.col, self.buffer.row_len(self.cursor.row));
+            self.coerce_cursor();
             self.draw();
         }
+    }
+
+    fn coerce_cursor(&mut self) {
+        self.cursor.row = min(
+            self.cursor.row,
+            self.buffer.count_lines().saturating_sub(1),
+        );
+        self.cursor.col = min(self.cursor.col, self.buffer.row_len(self.cursor.row));
     }
 }
 
