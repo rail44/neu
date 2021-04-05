@@ -70,19 +70,26 @@ impl Buffer {
         self.0.edit(start..start, buffer);
     }
 
-    pub(crate) fn count_word_forward(&mut self, col: usize, row: usize) -> usize {
+    pub(crate) fn count_forward_word(&mut self, col: usize, row: usize) -> usize {
         let start = self.get_offset_by_cursor(col, row);
         let mut cursor = Cursor::new(&self.0, start);
 
         let mut i = 0;
         while let Some(c) = cursor.next_codepoint() {
-            i += 1;
             if !is_alpha(&c) {
-                return i;
+                break;
+            }
+            i += 1;
+        }
+
+        while let Some(c) = cursor.next_codepoint() {
+            i += 1;
+            if is_alpha(&c) {
+                break;
             }
         }
 
-        return 0;
+        i
     }
 
     pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Buffer {
