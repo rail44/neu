@@ -147,7 +147,7 @@ impl Editor {
             ForwardWard => {
                 self.cursor.col += self
                     .buffer
-                    .count_word_forward(self.cursor.col, self.cursor.row);
+                    .count_forward_word(self.cursor.col, self.cursor.row);
             }
             IntoInsertMode => {
                 self.mode = Mode::Insert;
