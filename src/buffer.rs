@@ -92,6 +92,28 @@ impl Buffer {
         i
     }
 
+    pub(crate) fn count_back_word(&mut self, col: usize, row: usize) -> usize {
+        let start = self.get_offset_by_cursor(col, row);
+        let mut cursor = Cursor::new(&self.0, start);
+
+        let mut i = 0;
+        while let Some(c) = cursor.prev_codepoint() {
+            i += 1;
+            if is_alpha(&c) {
+                break;
+            }
+        }
+
+        while let Some(c) = cursor.prev_codepoint() {
+            if !is_alpha(&c) {
+                break;
+            }
+            i += 1;
+        }
+
+        i
+    }
+
     pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Buffer {
         let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
