@@ -27,6 +27,7 @@ pub(crate) enum CmdKind {
     AppendYank,
     InsertYank,
     Escape,
+    ForwardWard,
 }
 
 fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
@@ -44,6 +45,7 @@ fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
         map(tag("yy"), |_| YankLine),
         map(tag("p"), |_| AppendYank),
         map(tag("P"), |_| InsertYank),
+        map(tag("w"), |_| ForwardWard),
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
             |_| Escape,
