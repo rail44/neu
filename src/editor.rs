@@ -250,6 +250,10 @@ impl Editor {
                     match k.unwrap() {
                         Key::Char(c) => cmd.push(c),
                         Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
+                        Key::Up => cmd.push_str("<Up>"),
+                        Key::Down => cmd.push_str("<Down>"),
+                        Key::Left => cmd.push_str("<Left>"),
+                        Key::Right => cmd.push_str("<Right>"),
                         Key::Esc => cmd.push_str("<Esc>"),
                         _ => {}
                     };
