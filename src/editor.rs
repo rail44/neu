@@ -36,6 +36,13 @@ impl Mode {
         panic!();
     }
 
+    fn get_cmd_mut(&mut self) -> &mut String {
+        if let Mode::Normal(cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
+
     fn get_cmdline(&self) -> &String {
         if let Mode::CmdLine(cmd) = self {
             return cmd;
@@ -146,6 +153,11 @@ impl Editor {
                 self.cursor.row += cmd.count;
             }
             CursorUp => {
+                if self.cursor.row == 0 {
+                    self.row_offset = self.row_offset.saturating_sub(cmd.count);
+                    self.mode.get_cmd_mut().clear();
+                    return;
+                }
                 self.cursor.row = self.cursor.row.saturating_sub(cmd.count);
             }
             CursorRight => {
@@ -154,12 +166,12 @@ impl Editor {
             ForwardWord => {
                 self.cursor.col += self
                     .buffer
-                    .count_forward_word(self.cursor.col, self.cursor.row);
+                    .count_forward_word(self.cursor.col, self.cursor.row + self.row_offset);
             }
             BackWord => {
                 self.cursor.col -= self
                     .buffer
-                    .count_back_word(self.cursor.col, self.cursor.row);
+                    .count_back_word(self.cursor.col, self.cursor.row + self.row_offset);
             }
             IntoInsertMode => {
                 self.mode = Mode::Insert;
@@ -172,15 +184,21 @@ impl Editor {
                 self.mode = Mode::CmdLine(String::new());
             }
             RemoveChar => {
-                self.yanked = self
-                    .buffer
-                    .remove_chars(self.cursor.col, self.cursor.row, cmd.count);
+                self.yanked = self.buffer.remove_chars(
+                    self.cursor.col,
+                    self.cursor.row + self.row_offset,
+                    cmd.count,
+                );
             }
             RemoveLine => {
-                self.yanked = self.buffer.remove_lines(self.cursor.row, cmd.count);
+                self.yanked = self
+                    .buffer
+                    .remove_lines(self.cursor.row + self.row_offset, cmd.count);
             }
             YankLine => {
-                self.yanked = self.buffer.subseq_lines(self.cursor.row, cmd.count);
+                self.yanked = self
+                    .buffer
+                    .subseq_lines(self.cursor.row + self.row_offset, cmd.count);
             }
             AppendYank => {
                 let col = if self.yanked.end_with_line_break() {
@@ -192,7 +210,7 @@ impl Editor {
                 };
                 for _ in 0..cmd.count {
                     self.buffer
-                        .insert(col, self.cursor.row, self.yanked.clone());
+                        .insert(col, self.cursor.row + self.row_offset, self.yanked.clone());
                 }
             }
             InsertYank => {
@@ -203,7 +221,7 @@ impl Editor {
                 };
                 for _ in 0..cmd.count {
                     self.buffer
-                        .insert(col, self.cursor.row, self.yanked.clone());
+                        .insert(col, self.cursor.row + self.row_offset, self.yanked.clone());
                 }
             }
             Escape => {}
@@ -238,14 +256,18 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.buffer
-                        .insert_char(self.cursor.col, self.cursor.row, '\n');
+                    self.buffer.insert_char(
+                        self.cursor.col,
+                        self.cursor.row + self.row_offset,
+                        '\n',
+                    );
                     self.cursor.row += 1;
                     self.cursor.col = 0;
                     // scroll();
                     return;
                 }
-                self.buffer.insert_char(self.cursor.col, self.cursor.row, c);
+                self.buffer
+                    .insert_char(self.cursor.col, self.cursor.row + self.row_offset, c);
                 self.cursor.col += 1;
             }
             Key::Esc | Key::Ctrl('c') => {
@@ -303,7 +325,20 @@ impl Editor {
 
     fn coerce_cursor(&mut self) {
         self.cursor.row = min(self.cursor.row, self.buffer.count_lines().saturating_sub(1));
-        self.cursor.col = min(self.cursor.col, self.buffer.row_len(self.cursor.row));
+
+        let textarea_row = (self.size.1 - 3) as usize;
+        if self.cursor.row > textarea_row {
+            self.row_offset += self.cursor.row - textarea_row;
+            self.row_offset = min(
+                self.row_offset,
+                self.buffer.count_lines().saturating_sub(textarea_row),
+            );
+            self.cursor.row = textarea_row;
+        }
+        self.cursor.col = min(
+            self.cursor.col,
+            self.buffer.row_len(self.cursor.row + self.row_offset),
+        );
     }
 }
 
