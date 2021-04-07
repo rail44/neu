@@ -96,13 +96,18 @@ impl Default for Editor {
 impl Editor {
     fn draw(&mut self) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-        for line in self
-            .buffer
-            .lines()
-            .skip(self.row_offset)
-            .take((self.size.1 - 2) as usize)
-        {
+        let mut wraps = 0;
+        let mut drawed_lines_count = 0;
+        for (i, line) in self.buffer.lines().skip(self.row_offset).enumerate() {
+            let wrap = (line.len() as u16) / self.size.0;
+            if i < self.cursor.row {
+                wraps += wrap
+            }
             write!(self.stdout, "{}\r\n", line).unwrap();
+            drawed_lines_count += 1 + wrap;
+            if drawed_lines_count >= self.size.1 - 2 {
+                break;
+            }
         }
         write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1 - 1)).unwrap();
         match &self.mode {
@@ -127,12 +132,9 @@ impl Editor {
                 .unwrap();
             }
         };
-        write!(
-            self.stdout,
-            "{}",
-            termion::cursor::Goto(self.cursor.col as u16 + 1, self.cursor.row as u16 + 1)
-        )
-        .unwrap();
+        let col = self.cursor.col as u16 % self.size.0;
+        let row = self.cursor.row as u16 + self.cursor.col as u16 / self.size.0 + wraps;
+        write!(self.stdout, "{}", termion::cursor::Goto(col + 1, row + 1)).unwrap();
         self.stdout.flush().unwrap();
     }
 

@@ -10,10 +10,7 @@ use xi_rope::{Cursor, LinesMetric, Rope};
 pub(crate) struct Buffer(Rope);
 
 fn is_alpha(c: &char) -> bool {
-    match c {
-        'a'..='z' | 'A'..='Z' | '_' => true,
-        _ => false,
-    }
+    matches!(c, 'a'..='z' | 'A'..='Z' | '_')
 }
 
 impl Buffer {
@@ -45,6 +42,10 @@ impl Buffer {
 
     pub(crate) fn lines(&self) -> impl Iterator<Item = Cow<'_, str>> + '_ {
         self.0.lines(..)
+    }
+
+    pub(crate) fn line(&self, n: usize) -> Option<Cow<'_, str>> {
+        self.lines().nth(n)
     }
 
     pub(crate) fn remove_lines(&mut self, row: usize, count: usize) -> Buffer {
