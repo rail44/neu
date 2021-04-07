@@ -63,7 +63,7 @@ pub(crate) struct Editor {
     cursor: Cursor,
     row_offset: usize,
     buffer: Buffer,
-    stdout: RawTerminal<Stdout>,
+    stdout: BufWriter<RawTerminal<Stdout>>,
     yanked: Buffer,
 }
 
@@ -71,7 +71,7 @@ impl Default for Editor {
     fn default() -> Self {
         let mode = Mode::Normal(String::new());
 
-        let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(
             stdout,
             "{}{}",
@@ -102,8 +102,7 @@ impl Editor {
             .skip(self.row_offset)
             .take((self.size.1 - 2) as usize)
         {
-            write!(self.stdout, "{}", line).unwrap();
-            write!(self.stdout, "\r\n").unwrap();
+            write!(self.stdout, "{}\r\n", line).unwrap();
         }
         write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1 - 1)).unwrap();
         match &self.mode {
@@ -346,7 +345,7 @@ impl From<Buffer> for Editor {
     fn from(b: Buffer) -> Self {
         let mode = Mode::Normal(String::new());
 
-        let mut stdout = stdout().into_raw_mode().unwrap();
+        let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(
             stdout,
             "{}{}",
