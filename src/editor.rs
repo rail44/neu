@@ -98,14 +98,24 @@ impl Editor {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
         let mut wraps = 0;
         let mut drawed_lines_count = 0;
+        let textarea_row = self.size.1 - 2;
         for (i, line) in self.buffer.lines().skip(self.row_offset).enumerate() {
             let wrap = (line.len() as u16) / self.size.0;
+            drawed_lines_count += 1;
+
+            let line = if drawed_lines_count >= textarea_row && i != self.cursor.row {
+                let s: String = line.chars().take(self.size.0 as usize).collect();
+                s.into()
+            } else {
+                line
+            };
+            write!(self.stdout, "{}\r\n", line).unwrap();
+
             if i < self.cursor.row {
                 wraps += wrap
             }
-            write!(self.stdout, "{}\r\n", line).unwrap();
-            drawed_lines_count += 1 + wrap;
-            if drawed_lines_count >= self.size.1 - 2 {
+            drawed_lines_count += wrap;
+            if drawed_lines_count >= textarea_row {
                 break;
             }
         }
@@ -328,18 +338,33 @@ impl Editor {
         self.cursor.row = min(self.cursor.row, self.buffer.count_lines().saturating_sub(1));
 
         let textarea_row = (self.size.1 - 3) as usize;
-        if self.cursor.row > textarea_row {
-            self.row_offset += self.cursor.row - textarea_row;
+        let actual_row = textarea_row - self.wrap_offset();
+        if self.cursor.row > actual_row {
+            self.row_offset += self.cursor.row - actual_row;
             self.row_offset = min(
                 self.row_offset,
-                self.buffer.count_lines().saturating_sub(textarea_row),
+                self.buffer.count_lines().saturating_sub(actual_row),
             );
-            self.cursor.row = textarea_row;
+            self.cursor.row = actual_row;
         }
         self.cursor.col = min(
             self.cursor.col,
             self.buffer.row_len(self.cursor.row + self.row_offset),
         );
+    }
+
+    fn wrap_offset(&mut self) -> usize {
+        let mut wraps = 0;
+        let mut lines_count = 0;
+        for line in self.buffer.lines().skip(self.row_offset) {
+            let wrap = (line.len() as u16) / self.size.0;
+            wraps += wrap;
+            lines_count += 1 + wrap;
+            if lines_count >= self.size.1 - 2 {
+                break;
+            }
+        }
+        wraps as usize
     }
 }
 
