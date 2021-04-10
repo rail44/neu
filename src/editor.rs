@@ -100,7 +100,7 @@ impl Handler<Run> for Editor {
                         Key::Esc => cmd.push_str("<Esc>"),
                         _ => {}
                     };
-                    self.handle_normal_mode();
+                    self.handle_normal_mode(ctx).await;
                 }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()),
                 Mode::CmdLine(cmd) => {
@@ -222,7 +222,7 @@ impl Editor {
         self.stdout.flush().unwrap();
     }
 
-    fn handle_normal_mode(&mut self) {
+    async fn handle_normal_mode(&mut self, ctx: &mut Context<Self>) {
         let parsed = cmd::parse(self.mode.get_cmd());
         if parsed.is_err() {
             return;
@@ -239,8 +239,9 @@ impl Editor {
             }
             CursorUp => {
                 if self.cursor.row == 0 {
-                    self.state_actor.send(actor::SubRowOffset(cmd.count));
-
+                    ctx.handle_while(self, self.state_actor.send(actor::SubRowOffset(cmd.count)))
+                        .await
+                        .unwrap();
                     self.mode.get_cmd_mut().clear();
                     return;
                 }
