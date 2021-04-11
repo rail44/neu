@@ -15,17 +15,6 @@ use crate::buffer::Buffer;
 use crate::cmd;
 use crate::cmdline;
 
-struct Cursor {
-    row: usize,
-    col: usize,
-}
-
-impl Default for Cursor {
-    fn default() -> Self {
-        Cursor { row: 0, col: 0 }
-    }
-}
-
 enum Mode {
     Normal(String),
     Insert,
@@ -66,7 +55,6 @@ pub(crate) struct Editor {
     state_actor: Address<StateActor>,
     state: State,
     mode: Mode,
-    cursor: Cursor,
     buffer: Buffer,
     stdout: BufWriter<RawTerminal<Stdout>>,
     yanked: Buffer,
@@ -102,7 +90,7 @@ impl Handler<Run> for Editor {
                     };
                     self.handle_normal_mode(ctx).await;
                 }
-                Mode::Insert => self.handle_insert_mode(k.unwrap()),
+                Mode::Insert => self.handle_insert_mode(k.unwrap(), ctx).await,
                 Mode::CmdLine(cmd) => {
                     match k.unwrap() {
                         Key::Char('\n') => {
@@ -163,7 +151,6 @@ impl Editor {
             state_actor,
             state,
             buffer: Buffer::new(),
-            cursor: Cursor::default(),
             yanked: Buffer::default(),
         }
     }
@@ -177,7 +164,7 @@ impl Editor {
             let wrap = (line.len() as u16) / self.size.0;
             drawed_lines_count += 1;
 
-            let line = if drawed_lines_count >= textarea_row && i != self.cursor.row {
+            let line = if drawed_lines_count >= textarea_row && i != self.state.cursor.row {
                 let s: String = line.chars().take(self.size.0 as usize).collect();
                 s.into()
             } else {
@@ -185,7 +172,7 @@ impl Editor {
             };
             write!(self.stdout, "{}\r\n", line).unwrap();
 
-            if i < self.cursor.row {
+            if i < self.state.cursor.row {
                 wraps += wrap
             }
             drawed_lines_count += wrap;
@@ -216,8 +203,8 @@ impl Editor {
                 .unwrap();
             }
         };
-        let col = self.cursor.col as u16 % self.size.0;
-        let row = self.cursor.row as u16 + self.cursor.col as u16 / self.size.0 + wraps;
+        let col = self.state.cursor.col as u16 % self.size.0;
+        let row = self.state.cursor.row as u16 + self.state.cursor.col as u16 / self.size.0 + wraps;
         write!(self.stdout, "{}", termion::cursor::Goto(col + 1, row + 1)).unwrap();
         self.stdout.flush().unwrap();
     }
@@ -232,39 +219,57 @@ impl Editor {
         use cmd::CmdKind::*;
         match cmd.kind {
             CursorLeft => {
-                self.cursor.col = self.cursor.col.saturating_sub(cmd.count);
+                ctx.handle_while(self, self.state_actor.send(actor::CursorLeft(cmd.count)))
+                    .await
+                    .unwrap();
             }
             CursorDown => {
-                self.cursor.row += cmd.count;
+                ctx.handle_while(self, self.state_actor.send(actor::CursorDown(cmd.count)))
+                    .await
+                    .unwrap();
             }
             CursorUp => {
-                if self.cursor.row == 0 {
+                if self.state.cursor.row == 0 {
                     ctx.handle_while(self, self.state_actor.send(actor::SubRowOffset(cmd.count)))
                         .await
                         .unwrap();
                     self.mode.get_cmd_mut().clear();
                     return;
                 }
-                self.cursor.row = self.cursor.row.saturating_sub(cmd.count);
+                ctx.handle_while(self, self.state_actor.send(actor::CursorUp(cmd.count)))
+                    .await
+                    .unwrap();
             }
             CursorRight => {
-                self.cursor.col += cmd.count;
+                ctx.handle_while(self, self.state_actor.send(actor::CursorRight(cmd.count)))
+                    .await
+                    .unwrap();
             }
             ForwardWord => {
-                self.cursor.col += self
-                    .buffer
-                    .count_forward_word(self.cursor.col, self.cursor.row + self.state.row_offset);
+                let count = self.buffer.count_forward_word(
+                    self.state.cursor.col,
+                    self.state.cursor.row + self.state.row_offset,
+                );
+                ctx.handle_while(self, self.state_actor.send(actor::CursorRight(count)))
+                    .await
+                    .unwrap();
             }
             BackWord => {
-                self.cursor.col -= self
-                    .buffer
-                    .count_back_word(self.cursor.col, self.cursor.row + self.state.row_offset);
+                let count = self.buffer.count_back_word(
+                    self.state.cursor.col,
+                    self.state.cursor.row + self.state.row_offset,
+                );
+                ctx.handle_while(self, self.state_actor.send(actor::CursorLeft(count)))
+                    .await
+                    .unwrap();
             }
             IntoInsertMode => {
                 self.mode = Mode::Insert;
             }
             IntoAppendMode => {
-                self.cursor.col += 1;
+                ctx.handle_while(self, self.state_actor.send(actor::CursorRight(1)))
+                    .await
+                    .unwrap();
                 self.mode = Mode::Insert;
             }
             IntoCmdLineMode => {
@@ -272,33 +277,37 @@ impl Editor {
             }
             RemoveChar => {
                 self.yanked = self.buffer.remove_chars(
-                    self.cursor.col,
-                    self.cursor.row + self.state.row_offset,
+                    self.state.cursor.col,
+                    self.state.cursor.row + self.state.row_offset,
                     cmd.count,
                 );
             }
             RemoveLine => {
                 self.yanked = self
                     .buffer
-                    .remove_lines(self.cursor.row + self.state.row_offset, cmd.count);
+                    .remove_lines(self.state.cursor.row + self.state.row_offset, cmd.count);
             }
             YankLine => {
                 self.yanked = self
                     .buffer
-                    .subseq_lines(self.cursor.row + self.state.row_offset, cmd.count);
+                    .subseq_lines(self.state.cursor.row + self.state.row_offset, cmd.count);
             }
             AppendYank => {
                 let col = if self.yanked.end_with_line_break() {
-                    self.cursor.row += 1;
+                    ctx.handle_while(self, self.state_actor.send(actor::CursorDown(1)))
+                        .await
+                        .unwrap();
                     0
                 } else {
-                    self.cursor.col += 1;
-                    self.cursor.col
+                    ctx.handle_while(self, self.state_actor.send(actor::CursorRight(1)))
+                        .await
+                        .unwrap();
+                    self.state.cursor.col
                 };
                 for _ in 0..cmd.count {
                     self.buffer.insert(
                         col,
-                        self.cursor.row + self.state.row_offset,
+                        self.state.cursor.row + self.state.row_offset,
                         self.yanked.clone(),
                     );
                 }
@@ -307,12 +316,12 @@ impl Editor {
                 let col = if self.yanked.end_with_line_break() {
                     0
                 } else {
-                    self.cursor.col
+                    self.state.cursor.col
                 };
                 for _ in 0..cmd.count {
                     self.buffer.insert(
                         col,
-                        self.cursor.row + self.state.row_offset,
+                        self.state.cursor.row + self.state.row_offset,
                         self.yanked.clone(),
                     );
                 }
@@ -345,26 +354,32 @@ impl Editor {
         Signal::Nope
     }
 
-    fn handle_insert_mode(&mut self, k: Key) {
+    async fn handle_insert_mode(&mut self, k: Key, ctx: &mut Context<Self>) {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
                     self.buffer.insert_char(
-                        self.cursor.col,
-                        self.cursor.row + self.state.row_offset,
+                        self.state.cursor.col,
+                        self.state.cursor.row + self.state.row_offset,
                         '\n',
                     );
-                    self.cursor.row += 1;
-                    self.cursor.col = 0;
+                    ctx.handle_while(self, self.state_actor.send(actor::CursorDown(1)))
+                        .await
+                        .unwrap();
+                    ctx.handle_while(self, self.state_actor.send(actor::CursorLineHead))
+                        .await
+                        .unwrap();
                     // scroll();
                     return;
                 }
                 self.buffer.insert_char(
-                    self.cursor.col,
-                    self.cursor.row + self.state.row_offset,
+                    self.state.cursor.col,
+                    self.state.cursor.row + self.state.row_offset,
                     c,
                 );
-                self.cursor.col += 1;
+                ctx.handle_while(self, self.state_actor.send(actor::CursorRight(1)))
+                    .await
+                    .unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
                 self.mode = Mode::Normal(String::new());
@@ -374,13 +389,19 @@ impl Editor {
     }
 
     async fn coerce_cursor(&mut self, ctx: &mut Context<Self>) {
-        self.cursor.row = min(self.cursor.row, self.buffer.count_lines().saturating_sub(1));
+        let row = min(
+            self.state.cursor.row,
+            self.buffer.count_lines().saturating_sub(1),
+        );
+        ctx.handle_while(self, self.state_actor.send(actor::CursorRow(row)))
+            .await
+            .unwrap();
 
         let textarea_row = (self.size.1 - 3) as usize;
         let actual_row = textarea_row - self.wrap_offset();
-        if self.cursor.row > actual_row {
+        if self.state.cursor.row > actual_row {
             let new_row_offset = min(
-                self.state.row_offset + self.cursor.row - actual_row,
+                self.state.row_offset + self.state.cursor.row - actual_row,
                 self.buffer.count_lines().saturating_sub(actual_row),
             );
             ctx.handle_while(
@@ -390,12 +411,18 @@ impl Editor {
             )
             .await
             .unwrap();
-            self.cursor.row = actual_row;
+            ctx.handle_while(self, self.state_actor.send(actor::CursorRow(actual_row)))
+                .await
+                .unwrap();
         }
-        self.cursor.col = min(
-            self.cursor.col,
-            self.buffer.row_len(self.cursor.row + self.state.row_offset),
+        let col = min(
+            self.state.cursor.col,
+            self.buffer
+                .row_len(self.state.cursor.row + self.state.row_offset),
         );
+        ctx.handle_while(self, self.state_actor.send(actor::CursorCol(col)))
+            .await
+            .unwrap();
     }
 
     fn wrap_offset(&mut self) -> usize {
