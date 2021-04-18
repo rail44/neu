@@ -2,6 +2,43 @@ use crate::editor;
 use crate::editor::Editor;
 use xtra::prelude::*;
 
+#[derive(Clone, Debug)]
+pub(crate) enum Mode {
+    Normal(String),
+    Insert,
+    CmdLine(String),
+}
+
+impl Default for Mode {
+    fn default() -> Self {
+        Mode::Normal(String::new())
+    }
+}
+
+impl Mode {
+    pub(crate) fn get_cmd(&self) -> &String {
+        if let Mode::Normal(cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
+
+    pub(crate) fn get_cmd_mut(&mut self) -> &mut String {
+        if let Mode::Normal(cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
+
+pub(crate) fn get_cmdline(&self) -> &String {
+        if let Mode::CmdLine(cmd) = self {
+            return cmd;
+        }
+        panic!();
+    }
+}
+
+
 #[derive(Default, Clone, Debug)]
 pub(crate) struct Cursor {
     pub(crate) row: usize,
@@ -12,6 +49,7 @@ pub(crate) struct Cursor {
 pub(crate) struct State {
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
+    pub(crate) mode: Mode,
 }
 
 #[derive(Default)]
@@ -158,6 +196,45 @@ impl Message for CursorCol {
 impl Handler<CursorCol> for StateActor {
     async fn handle(&mut self, msg: CursorCol, _ctx: &mut Context<Self>) {
         self.state.cursor.col = msg.0;
+        self.notify().await;
+    }
+}
+
+pub(crate) struct IntoNormalMode;
+impl Message for IntoNormalMode {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<IntoNormalMode> for StateActor {
+    async fn handle(&mut self, _msg: IntoNormalMode, _ctx: &mut Context<Self>) {
+        self.state.mode = Mode::Normal(String::new());
+        self.notify().await;
+    }
+}
+
+pub(crate) struct IntoInsertMode;
+impl Message for IntoInsertMode {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<IntoInsertMode> for StateActor {
+    async fn handle(&mut self, _msg: IntoInsertMode, _ctx: &mut Context<Self>) {
+        self.state.mode = Mode::Insert;
+        self.notify().await;
+    }
+}
+
+pub(crate) struct IntoCmdLineMode;
+impl Message for IntoCmdLineMode {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<IntoCmdLineMode> for StateActor {
+    async fn handle(&mut self, _msg: IntoCmdLineMode, _ctx: &mut Context<Self>) {
+        self.state.mode = Mode::CmdLine(String::new());
         self.notify().await;
     }
 }
