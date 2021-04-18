@@ -10,39 +10,10 @@ use termion::terminal_size;
 use xtra::prelude::*;
 
 use crate::actor;
-use crate::actor::{State, StateActor};
+use crate::actor::{Mode, State, StateActor};
 use crate::buffer::Buffer;
 use crate::cmd;
 use crate::cmdline;
-
-enum Mode {
-    Normal(String),
-    Insert,
-    CmdLine(String),
-}
-
-impl Mode {
-    fn get_cmd(&self) -> &String {
-        if let Mode::Normal(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-
-    fn get_cmd_mut(&mut self) -> &mut String {
-        if let Mode::Normal(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-
-    fn get_cmdline(&self) -> &String {
-        if let Mode::CmdLine(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-}
 
 #[derive(PartialEq)]
 enum Signal {
@@ -54,7 +25,6 @@ pub(crate) struct Editor {
     size: (u16, u16),
     state_actor: Address<StateActor>,
     state: State,
-    mode: Mode,
     buffer: Buffer,
     stdout: BufWriter<RawTerminal<Stdout>>,
     yanked: Buffer,
@@ -76,7 +46,7 @@ impl Handler<Run> for Editor {
             write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
             self.stdout.flush().unwrap();
 
-            match &mut self.mode {
+            match &mut self.state.mode {
                 Mode::Normal(cmd) => {
                     match k.unwrap() {
                         Key::Char(c) => cmd.push(c),
@@ -94,7 +64,7 @@ impl Handler<Run> for Editor {
                 Mode::CmdLine(cmd) => {
                     match k.unwrap() {
                         Key::Char('\n') => {
-                            let signal = self.handle_cmd_line_mode();
+                            let signal = self.handle_cmd_line_mode(ctx).await;
                             if Signal::Quit == signal {
                                 break;
                             }
@@ -104,7 +74,9 @@ impl Handler<Run> for Editor {
                             cmd.pop();
                         }
                         Key::Esc | Key::Ctrl('c') => {
-                            self.mode = Mode::Normal(String::new());
+                            ctx.handle_while(self, self.state_actor.send(actor::IntoNormalMode))
+                                .await
+                                .unwrap();
                         }
                         _ => {}
                     };
@@ -145,7 +117,6 @@ impl Editor {
         let state = State::default();
 
         Editor {
-            mode,
             size,
             stdout,
             state_actor,
@@ -181,7 +152,7 @@ impl Editor {
             }
         }
         write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1 - 1)).unwrap();
-        match &self.mode {
+        match &self.state.mode {
             Mode::Normal(cmd) => {
                 if cmd.is_empty() {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
@@ -210,7 +181,7 @@ impl Editor {
     }
 
     async fn handle_normal_mode(&mut self, ctx: &mut Context<Self>) {
-        let parsed = cmd::parse(self.mode.get_cmd());
+        let parsed = cmd::parse(self.state.mode.get_cmd());
         if parsed.is_err() {
             return;
         }
@@ -233,7 +204,7 @@ impl Editor {
                     ctx.handle_while(self, self.state_actor.send(actor::SubRowOffset(cmd.count)))
                         .await
                         .unwrap();
-                    self.mode.get_cmd_mut().clear();
+                    self.state.mode.get_cmd_mut().clear();
                     return;
                 }
                 ctx.handle_while(self, self.state_actor.send(actor::CursorUp(cmd.count)))
@@ -264,16 +235,22 @@ impl Editor {
                     .unwrap();
             }
             IntoInsertMode => {
-                self.mode = Mode::Insert;
+                ctx.handle_while(self, self.state_actor.send(actor::IntoInsertMode))
+                    .await
+                    .unwrap();
             }
             IntoAppendMode => {
                 ctx.handle_while(self, self.state_actor.send(actor::CursorRight(1)))
                     .await
                     .unwrap();
-                self.mode = Mode::Insert;
+                ctx.handle_while(self, self.state_actor.send(actor::IntoInsertMode))
+                    .await
+                    .unwrap();
             }
             IntoCmdLineMode => {
-                self.mode = Mode::CmdLine(String::new());
+                ctx.handle_while(self, self.state_actor.send(actor::IntoCmdLineMode))
+                    .await
+                    .unwrap();
             }
             RemoveChar => {
                 self.yanked = self.buffer.remove_chars(
@@ -328,15 +305,17 @@ impl Editor {
             }
             Escape => {}
         }
-        if let Mode::Normal(ref mut cmd) = self.mode {
+        if let Mode::Normal(ref mut cmd) = self.state.mode {
             cmd.clear();
         }
     }
 
-    fn handle_cmd_line_mode(&mut self) -> Signal {
-        let parsed = cmdline::parse(self.mode.get_cmdline());
+    async fn handle_cmd_line_mode(&mut self, ctx: &mut Context<Self>) -> Signal {
+        let parsed = cmdline::parse(self.state.mode.get_cmdline());
         if parsed.is_err() {
-            self.mode = Mode::Normal(String::new());
+            ctx.handle_while(self, self.state_actor.send(actor::IntoNormalMode))
+                .await
+                .unwrap();
             return Signal::Nope;
         }
         let (_, cmd) = parsed.unwrap();
@@ -350,7 +329,9 @@ impl Editor {
             }
             Quit => return Signal::Quit,
         }
-        self.mode = Mode::Normal(String::new());
+        ctx.handle_while(self, self.state_actor.send(actor::IntoNormalMode))
+            .await
+            .unwrap();
         Signal::Nope
     }
 
@@ -382,7 +363,9 @@ impl Editor {
                     .unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
-                self.mode = Mode::Normal(String::new());
+                ctx.handle_while(self, self.state_actor.send(actor::IntoNormalMode))
+                    .await
+                    .unwrap();
             }
             _ => {}
         }
