@@ -27,7 +27,6 @@ pub(crate) struct Editor {
     state: State,
     buffer: Buffer,
     stdout: BufWriter<RawTerminal<Stdout>>,
-    yanked: Buffer,
 }
 
 impl Actor for Editor {}
@@ -102,8 +101,6 @@ impl Handler<ChangeState> for Editor {
 
 impl Editor {
     pub(crate) fn new(state_actor: Address<StateActor>) -> Self {
-        let mode = Mode::Normal(String::new());
-
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(
             stdout,
@@ -114,15 +111,12 @@ impl Editor {
         .unwrap();
         let size = terminal_size().unwrap();
 
-        let state = State::default();
-
         Editor {
             size,
             stdout,
             state_actor,
-            state,
+            state: State::default(),
             buffer: Buffer::new(),
-            yanked: Buffer::default(),
         }
     }
 
@@ -253,24 +247,33 @@ impl Editor {
                     .unwrap();
             }
             RemoveChar => {
-                self.yanked = self.buffer.remove_chars(
+                let yank = self.buffer.remove_chars(
                     self.state.cursor.col,
                     self.state.cursor.row + self.state.row_offset,
                     cmd.count,
                 );
+                ctx.handle_while(self, self.state_actor.send(actor::SetYank(yank)))
+                    .await
+                    .unwrap();
             }
             RemoveLine => {
-                self.yanked = self
+                let yank = self
                     .buffer
                     .remove_lines(self.state.cursor.row + self.state.row_offset, cmd.count);
+                ctx.handle_while(self, self.state_actor.send(actor::SetYank(yank)))
+                    .await
+                    .unwrap();
             }
             YankLine => {
-                self.yanked = self
+                let yank = self
                     .buffer
                     .subseq_lines(self.state.cursor.row + self.state.row_offset, cmd.count);
+                ctx.handle_while(self, self.state_actor.send(actor::SetYank(yank)))
+                    .await
+                    .unwrap();
             }
             AppendYank => {
-                let col = if self.yanked.end_with_line_break() {
+                let col = if self.state.yanked.end_with_line_break() {
                     ctx.handle_while(self, self.state_actor.send(actor::CursorDown(1)))
                         .await
                         .unwrap();
@@ -285,12 +288,12 @@ impl Editor {
                     self.buffer.insert(
                         col,
                         self.state.cursor.row + self.state.row_offset,
-                        self.yanked.clone(),
+                        self.state.yanked.clone(),
                     );
                 }
             }
             InsertYank => {
-                let col = if self.yanked.end_with_line_break() {
+                let col = if self.state.yanked.end_with_line_break() {
                     0
                 } else {
                     self.state.cursor.col
@@ -299,7 +302,7 @@ impl Editor {
                     self.buffer.insert(
                         col,
                         self.state.cursor.row + self.state.row_offset,
-                        self.yanked.clone(),
+                        self.state.yanked.clone(),
                     );
                 }
             }

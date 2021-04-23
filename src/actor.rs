@@ -1,5 +1,6 @@
 use crate::editor;
 use crate::editor::Editor;
+use crate::buffer::Buffer;
 use xtra::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -50,6 +51,7 @@ pub(crate) struct State {
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
     pub(crate) mode: Mode,
+    pub(crate) yanked: Buffer,
 }
 
 #[derive(Default)]
@@ -235,6 +237,19 @@ impl Message for IntoCmdLineMode {
 impl Handler<IntoCmdLineMode> for StateActor {
     async fn handle(&mut self, _msg: IntoCmdLineMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::CmdLine(String::new());
+        self.notify().await;
+    }
+}
+
+pub(crate) struct SetYank(pub(crate) Buffer);
+impl Message for SetYank {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<SetYank> for StateActor {
+    async fn handle(&mut self, msg: SetYank, _ctx: &mut Context<Self>) {
+        self.state.yanked = msg.0;
         self.notify().await;
     }
 }

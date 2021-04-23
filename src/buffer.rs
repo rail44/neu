@@ -6,7 +6,7 @@ use xi_rope::interval::IntervalBounds;
 use xi_rope::rope::BaseMetric;
 use xi_rope::{Cursor, LinesMetric, Rope};
 
-#[derive(Default, Clone)]
+#[derive(Default, Clone, Debug)]
 pub(crate) struct Buffer(Rope);
 
 fn is_alpha(c: &char) -> bool {
