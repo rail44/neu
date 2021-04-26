@@ -4,17 +4,17 @@ use clap::{crate_authors, crate_version, Clap};
 use xtra::prelude::*;
 use xtra::spawn::Smol;
 
-mod actor;
 mod buffer;
 mod cmd;
 mod cmdline;
 mod editor;
 mod renderer;
+mod store;
 
-use crate::actor::StateActor;
 use crate::buffer::Buffer;
 use crate::editor::Editor;
 use crate::renderer::Renderer;
+use crate::store::Store;
 
 #[derive(Clap)]
 #[clap(version = crate_version!(), author = crate_authors!())]
@@ -26,18 +26,18 @@ fn main() {
     smol::block_on(async {
         let opts: Opts = Opts::parse();
         let renderer = Renderer::new().create(None).spawn(&mut Smol::Global);
-        let mut state_actor = StateActor::new(renderer).await;
+        let mut store = Store::new(renderer).await;
 
         if let Some(filename) = opts.filename {
             let s = fs::read_to_string(filename).unwrap();
             let buffer = Buffer::from(s.as_str());
 
-            state_actor.set_buffer(buffer).await;
+            store.set_buffer(buffer).await;
         };
 
-        let state_addr = state_actor.create(None).spawn(&mut Smol::Global);
+        let store_addr = store.create(None).spawn(&mut Smol::Global);
 
-        let editor = Editor::new(state_addr.clone());
+        let editor = Editor::new(store_addr);
         let addr = editor.create(None).spawn(&mut Smol::Global);
         addr.send(editor::Run).await.unwrap();
     })

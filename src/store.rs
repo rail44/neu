@@ -68,12 +68,12 @@ impl State {
     }
 }
 
-pub(crate) struct StateActor {
+pub(crate) struct Store {
     state: State,
     renderer: Address<Renderer>,
 }
 
-impl StateActor {
+impl Store {
     pub(crate) async fn new(renderer: Address<Renderer>) -> Self {
         let mut actor = Self {
             renderer,
@@ -89,9 +89,9 @@ impl StateActor {
     }
 }
 
-impl Actor for StateActor {}
+impl Actor for Store {}
 
-impl StateActor {
+impl Store {
     fn coerce_cursor(&mut self) {
         let row = min(
             self.state.cursor.row,
@@ -147,7 +147,7 @@ impl Message for AddRowOffset {
 }
 
 #[async_trait::async_trait]
-impl Handler<AddRowOffset> for StateActor {
+impl Handler<AddRowOffset> for Store {
     async fn handle(&mut self, msg: AddRowOffset, _ctx: &mut Context<Self>) {
         self.state.row_offset += msg.0;
     }
@@ -159,7 +159,7 @@ impl Message for SubRowOffset {
 }
 
 #[async_trait::async_trait]
-impl Handler<SubRowOffset> for StateActor {
+impl Handler<SubRowOffset> for Store {
     async fn handle(&mut self, msg: SubRowOffset, _ctx: &mut Context<Self>) {
         self.state.row_offset = self.state.row_offset.saturating_sub(msg.0);
     }
@@ -171,7 +171,7 @@ impl Message for CursorLeft {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorLeft> for StateActor {
+impl Handler<CursorLeft> for Store {
     async fn handle(&mut self, msg: CursorLeft, _ctx: &mut Context<Self>) {
         self.state.cursor.col = self.state.cursor.col.saturating_sub(msg.0);
     }
@@ -183,7 +183,7 @@ impl Message for CursorDown {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorDown> for StateActor {
+impl Handler<CursorDown> for Store {
     async fn handle(&mut self, msg: CursorDown, _ctx: &mut Context<Self>) {
         self.state.cursor.row += msg.0;
     }
@@ -195,7 +195,7 @@ impl Message for CursorUp {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorUp> for StateActor {
+impl Handler<CursorUp> for Store {
     async fn handle(&mut self, msg: CursorUp, _ctx: &mut Context<Self>) {
         self.state.cursor.row = self.state.cursor.row.saturating_sub(msg.0);
     }
@@ -207,7 +207,7 @@ impl Message for CursorRight {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorRight> for StateActor {
+impl Handler<CursorRight> for Store {
     async fn handle(&mut self, msg: CursorRight, _ctx: &mut Context<Self>) {
         self.state.cursor.col += msg.0;
     }
@@ -219,7 +219,7 @@ impl Message for CursorLineHead {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorLineHead> for StateActor {
+impl Handler<CursorLineHead> for Store {
     async fn handle(&mut self, _msg: CursorLineHead, _ctx: &mut Context<Self>) {
         self.state.cursor.col = 0;
     }
@@ -231,7 +231,7 @@ impl Message for CursorRow {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorRow> for StateActor {
+impl Handler<CursorRow> for Store {
     async fn handle(&mut self, msg: CursorRow, _ctx: &mut Context<Self>) {
         self.state.cursor.row = msg.0;
     }
@@ -243,7 +243,7 @@ impl Message for CursorCol {
 }
 
 #[async_trait::async_trait]
-impl Handler<CursorCol> for StateActor {
+impl Handler<CursorCol> for Store {
     async fn handle(&mut self, msg: CursorCol, _ctx: &mut Context<Self>) {
         self.state.cursor.col = msg.0;
     }
@@ -255,7 +255,7 @@ impl Message for IntoNormalMode {
 }
 
 #[async_trait::async_trait]
-impl Handler<IntoNormalMode> for StateActor {
+impl Handler<IntoNormalMode> for Store {
     async fn handle(&mut self, _msg: IntoNormalMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::Normal(String::new());
     }
@@ -267,7 +267,7 @@ impl Message for IntoInsertMode {
 }
 
 #[async_trait::async_trait]
-impl Handler<IntoInsertMode> for StateActor {
+impl Handler<IntoInsertMode> for Store {
     async fn handle(&mut self, _msg: IntoInsertMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::Insert;
     }
@@ -279,7 +279,7 @@ impl Message for IntoCmdLineMode {
 }
 
 #[async_trait::async_trait]
-impl Handler<IntoCmdLineMode> for StateActor {
+impl Handler<IntoCmdLineMode> for Store {
     async fn handle(&mut self, _msg: IntoCmdLineMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::CmdLine(String::new());
     }
@@ -291,7 +291,7 @@ impl Message for SetYank {
 }
 
 #[async_trait::async_trait]
-impl Handler<SetYank> for StateActor {
+impl Handler<SetYank> for Store {
     async fn handle(&mut self, msg: SetYank, _ctx: &mut Context<Self>) {
         self.state.yanked = msg.0;
     }
@@ -303,7 +303,7 @@ impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Message for HandleSta
 }
 
 #[async_trait::async_trait]
-impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Handler<HandleState<F>> for StateActor {
+impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Handler<HandleState<F>> for Store {
     async fn handle(&mut self, msg: HandleState<F>, _ctx: &mut Context<Self>) -> V {
         let v = msg.0(&mut self.state);
         v
@@ -316,7 +316,7 @@ impl Message for GetState {
 }
 
 #[async_trait::async_trait]
-impl Handler<GetState> for StateActor {
+impl Handler<GetState> for Store {
     async fn handle(&mut self, _msg: GetState, _ctx: &mut Context<Self>) -> State {
         self.state.clone()
     }
@@ -328,7 +328,7 @@ impl Message for PushCmd {
 }
 
 #[async_trait::async_trait]
-impl Handler<PushCmd> for StateActor {
+impl Handler<PushCmd> for Store {
     async fn handle(&mut self, msg: PushCmd, _ctx: &mut Context<Self>) {
         match &mut self.state.mode {
             Mode::Normal(cmd) => {
@@ -348,7 +348,7 @@ impl Message for PushCmdStr {
 }
 
 #[async_trait::async_trait]
-impl Handler<PushCmdStr> for StateActor {
+impl Handler<PushCmdStr> for Store {
     async fn handle(&mut self, msg: PushCmdStr, _ctx: &mut Context<Self>) {
         match &mut self.state.mode {
             Mode::Normal(cmd) => {
@@ -368,7 +368,7 @@ impl Message for PopCmd {
 }
 
 #[async_trait::async_trait]
-impl Handler<PopCmd> for StateActor {
+impl Handler<PopCmd> for Store {
     async fn handle(&mut self, _msg: PopCmd, _ctx: &mut Context<Self>) {
         match &mut self.state.mode {
             Mode::Normal(cmd) => {
@@ -388,7 +388,7 @@ impl Message for Notify {
 }
 
 #[async_trait::async_trait]
-impl Handler<Notify> for StateActor {
+impl Handler<Notify> for Store {
     async fn handle(&mut self, _msg: Notify, _ctx: &mut Context<Self>) {
         self.notify().await;
     }
