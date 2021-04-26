@@ -1,55 +1,15 @@
-use core::cmp::min;
 use std::fs::File;
-use std::io::{stdin, stdout, BufWriter, Stdout, Write};
+use std::io::{stdin, BufWriter, Write};
 
 use termion::event::Key;
 use termion::input::TermRead;
-use termion::raw::{IntoRawMode, RawTerminal};
-use termion::terminal_size;
 
-use crate::buffer::Buffer;
+use xtra::prelude::*;
+
+use crate::actor;
+use crate::actor::{Mode, State, StateActor};
 use crate::cmd;
 use crate::cmdline;
-
-struct Cursor {
-    row: usize,
-    col: usize,
-}
-
-impl Default for Cursor {
-    fn default() -> Self {
-        Cursor { row: 0, col: 0 }
-    }
-}
-
-enum Mode {
-    Normal(String),
-    Insert,
-    CmdLine(String),
-}
-
-impl Mode {
-    fn get_cmd(&self) -> &String {
-        if let Mode::Normal(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-
-    fn get_cmd_mut(&mut self) -> &mut String {
-        if let Mode::Normal(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-
-    fn get_cmdline(&self) -> &String {
-        if let Mode::CmdLine(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-}
 
 #[derive(PartialEq)]
 enum Signal {
@@ -58,98 +18,87 @@ enum Signal {
 }
 
 pub(crate) struct Editor {
-    size: (u16, u16),
-    mode: Mode,
-    cursor: Cursor,
-    row_offset: usize,
-    buffer: Buffer,
-    stdout: BufWriter<RawTerminal<Stdout>>,
-    yanked: Buffer,
+    state: Address<StateActor>,
 }
 
-impl Default for Editor {
-    fn default() -> Self {
-        let mode = Mode::Normal(String::new());
+impl Actor for Editor {}
 
-        let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
-        write!(
-            stdout,
-            "{}{}",
-            termion::clear::All,
-            termion::cursor::Goto(1, 1)
-        )
-        .unwrap();
-        let size = terminal_size().unwrap();
+pub(crate) struct Run;
+impl Message for Run {
+    type Result = ();
+}
 
-        Editor {
-            mode,
-            size,
-            stdout,
-            row_offset: 0,
-            buffer: Buffer::new(),
-            cursor: Cursor::default(),
-            yanked: Buffer::default(),
+#[async_trait::async_trait]
+impl Handler<Run> for Editor {
+    async fn handle(&mut self, _msg: Run, _ctx: &mut Context<Self>) {
+        let stdin = stdin();
+        for k in stdin.keys() {
+            let state = self.state.send(actor::GetState).await.unwrap();
+            match &state.mode {
+                Mode::Normal(_) => {
+                    match k.unwrap() {
+                        Key::Char(c) => self.state.do_send(actor::PushCmd(c)).unwrap(),
+                        Key::Ctrl(c) => self
+                            .state
+                            .do_send(actor::PushCmdStr(format!("<C-{}>", c)))
+                            .unwrap(),
+                        Key::Up => self
+                            .state
+                            .do_send(actor::PushCmdStr("<Up>".to_string()))
+                            .unwrap(),
+                        Key::Down => self
+                            .state
+                            .do_send(actor::PushCmdStr("<Down>".to_string()))
+                            .unwrap(),
+                        Key::Left => self
+                            .state
+                            .do_send(actor::PushCmdStr("<Left>".to_string()))
+                            .unwrap(),
+                        Key::Right => self
+                            .state
+                            .do_send(actor::PushCmdStr("<Right>".to_string()))
+                            .unwrap(),
+                        Key::Esc => self
+                            .state
+                            .do_send(actor::PushCmdStr("<Esc>".to_string()))
+                            .unwrap(),
+                        _ => {}
+                    };
+                    self.handle_normal_mode().await;
+                }
+                Mode::Insert => self.handle_insert_mode(k.unwrap()).await,
+                Mode::CmdLine(_) => {
+                    match k.unwrap() {
+                        Key::Char('\n') => {
+                            let signal = self.handle_cmd_line_mode().await;
+                            if Signal::Quit == signal {
+                                break;
+                            }
+                        }
+                        Key::Char(c) => self.state.do_send(actor::PushCmd(c)).unwrap(),
+                        Key::Backspace => {
+                            self.state.do_send(actor::PopCmd).unwrap();
+                        }
+                        Key::Esc | Key::Ctrl('c') => {
+                            self.state.do_send(actor::IntoNormalMode).unwrap();
+                        }
+                        _ => {}
+                    };
+                }
+            }
+            self.state.send(actor::Notify).await.unwrap();
         }
     }
 }
 
 impl Editor {
-    fn draw(&mut self) {
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
-        let mut wraps = 0;
-        let mut drawed_lines_count = 0;
-        let textarea_row = self.size.1 - 2;
-        for (i, line) in self.buffer.lines().skip(self.row_offset).enumerate() {
-            let wrap = (line.len() as u16) / self.size.0;
-            drawed_lines_count += 1;
-
-            let line = if drawed_lines_count >= textarea_row && i != self.cursor.row {
-                let s: String = line.chars().take(self.size.0 as usize).collect();
-                s.into()
-            } else {
-                line
-            };
-            write!(self.stdout, "{}\r\n", line).unwrap();
-
-            if i < self.cursor.row {
-                wraps += wrap
-            }
-            drawed_lines_count += wrap;
-            if drawed_lines_count >= textarea_row {
-                break;
-            }
-        }
-        write!(self.stdout, "{}", termion::cursor::Goto(0, self.size.1 - 1)).unwrap();
-        match &self.mode {
-            Mode::Normal(cmd) => {
-                if cmd.is_empty() {
-                    write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
-                } else {
-                    write!(self.stdout, "{}NORMAL", termion::cursor::SteadyUnderline).unwrap();
-                }
-            }
-            Mode::Insert => {
-                write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
-            }
-            Mode::CmdLine(cmd) => {
-                write!(
-                    self.stdout,
-                    "{}COMMAND{}:{}",
-                    termion::cursor::SteadyBlock,
-                    termion::cursor::Goto(0, self.size.1),
-                    cmd
-                )
-                .unwrap();
-            }
-        };
-        let col = self.cursor.col as u16 % self.size.0;
-        let row = self.cursor.row as u16 + self.cursor.col as u16 / self.size.0 + wraps;
-        write!(self.stdout, "{}", termion::cursor::Goto(col + 1, row + 1)).unwrap();
-        self.stdout.flush().unwrap();
+    pub(crate) fn new(state: Address<StateActor>) -> Self {
+        Editor { state }
     }
 
-    fn handle_normal_mode(&mut self) {
-        let parsed = cmd::parse(self.mode.get_cmd());
+    async fn handle_normal_mode(&mut self) {
+        let state = self.state.send(actor::GetState).await.unwrap();
+        let parsed = cmd::parse(state.mode.get_cmd());
         if parsed.is_err() {
             return;
         }
@@ -158,94 +107,134 @@ impl Editor {
         use cmd::CmdKind::*;
         match cmd.kind {
             CursorLeft => {
-                self.cursor.col = self.cursor.col.saturating_sub(cmd.count);
+                self.state.do_send(actor::CursorLeft(cmd.count)).unwrap();
             }
             CursorDown => {
-                self.cursor.row += cmd.count;
+                self.state.do_send(actor::CursorDown(cmd.count)).unwrap();
             }
             CursorUp => {
-                if self.cursor.row == 0 {
-                    self.row_offset = self.row_offset.saturating_sub(cmd.count);
-                    self.mode.get_cmd_mut().clear();
+                if state.cursor.row == 0 {
+                    self.state.do_send(actor::SubRowOffset(cmd.count)).unwrap();
+                    self.state
+                        .do_send(actor::HandleState(|state: &mut State| {
+                            state.mode.get_cmd_mut().clear();
+                        }))
+                        .unwrap();
                     return;
                 }
-                self.cursor.row = self.cursor.row.saturating_sub(cmd.count);
+                self.state.do_send(actor::CursorUp(cmd.count)).unwrap();
             }
             CursorRight => {
-                self.cursor.col += cmd.count;
+                self.state.do_send(actor::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
-                self.cursor.col += self
+                let count = state
                     .buffer
-                    .count_forward_word(self.cursor.col, self.cursor.row + self.row_offset);
+                    .count_forward_word(state.cursor.col, state.cursor.row + state.row_offset);
+                self.state.do_send(actor::CursorRight(count)).unwrap();
             }
             BackWord => {
-                self.cursor.col -= self
+                let count = state
                     .buffer
-                    .count_back_word(self.cursor.col, self.cursor.row + self.row_offset);
+                    .count_back_word(state.cursor.col, state.cursor.row + state.row_offset);
+                self.state.do_send(actor::CursorLeft(count)).unwrap();
             }
             IntoInsertMode => {
-                self.mode = Mode::Insert;
+                self.state.do_send(actor::IntoInsertMode).unwrap();
             }
             IntoAppendMode => {
-                self.cursor.col += 1;
-                self.mode = Mode::Insert;
+                self.state.do_send(actor::CursorRight(1)).unwrap();
+                self.state.do_send(actor::IntoInsertMode).unwrap();
             }
             IntoCmdLineMode => {
-                self.mode = Mode::CmdLine(String::new());
+                self.state.do_send(actor::IntoCmdLineMode).unwrap();
             }
             RemoveChar => {
-                self.yanked = self.buffer.remove_chars(
-                    self.cursor.col,
-                    self.cursor.row + self.row_offset,
-                    cmd.count,
-                );
+                let yank = self
+                    .state
+                    .send(actor::HandleState(move |state: &mut State| {
+                        state.buffer.remove_chars(
+                            state.cursor.col,
+                            state.cursor.row + state.row_offset,
+                            cmd.count,
+                        )
+                    }))
+                    .await
+                    .unwrap();
+                self.state.do_send(actor::SetYank(yank)).unwrap();
             }
             RemoveLine => {
-                self.yanked = self
-                    .buffer
-                    .remove_lines(self.cursor.row + self.row_offset, cmd.count);
+                let yank = self
+                    .state
+                    .send(actor::HandleState(move |state: &mut State| {
+                        state
+                            .buffer
+                            .remove_lines(state.cursor.row + state.row_offset, cmd.count)
+                    }))
+                    .await
+                    .unwrap();
+                self.state.do_send(actor::SetYank(yank)).unwrap();
             }
             YankLine => {
-                self.yanked = self
+                let yank = state
                     .buffer
-                    .subseq_lines(self.cursor.row + self.row_offset, cmd.count);
+                    .subseq_lines(state.cursor.row + state.row_offset, cmd.count);
+                self.state.do_send(actor::SetYank(yank)).unwrap();
             }
             AppendYank => {
-                let col = if self.yanked.end_with_line_break() {
-                    self.cursor.row += 1;
+                let col = if state.yanked.end_with_line_break() {
+                    self.state.do_send(actor::CursorDown(1)).unwrap();
                     0
                 } else {
-                    self.cursor.col += 1;
-                    self.cursor.col
+                    self.state.do_send(actor::CursorRight(1)).unwrap();
+                    state.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.buffer
-                        .insert(col, self.cursor.row + self.row_offset, self.yanked.clone());
+                    self.state
+                        .do_send(actor::HandleState(move |state: &mut State| {
+                            state.buffer.insert(
+                                col,
+                                state.cursor.row + state.row_offset,
+                                state.yanked.clone(),
+                            );
+                        }))
+                        .unwrap();
                 }
             }
             InsertYank => {
-                let col = if self.yanked.end_with_line_break() {
+                let col = if state.yanked.end_with_line_break() {
                     0
                 } else {
-                    self.cursor.col
+                    state.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.buffer
-                        .insert(col, self.cursor.row + self.row_offset, self.yanked.clone());
+                    self.state
+                        .do_send(actor::HandleState(move |state: &mut State| {
+                            state.buffer.insert(
+                                col,
+                                state.cursor.row + state.row_offset,
+                                state.yanked.clone(),
+                            );
+                        }))
+                        .unwrap();
                 }
             }
             Escape => {}
         }
-        if let Mode::Normal(ref mut cmd) = self.mode {
-            cmd.clear();
-        }
+        self.state
+            .do_send(actor::HandleState(move |state: &mut State| {
+                if let Mode::Normal(ref mut cmd) = state.mode {
+                    cmd.clear();
+                }
+            }))
+            .unwrap();
     }
 
-    fn handle_cmd_line_mode(&mut self) -> Signal {
-        let parsed = cmdline::parse(self.mode.get_cmdline());
+    async fn handle_cmd_line_mode(&mut self) -> Signal {
+        let state = self.state.send(actor::GetState).await.unwrap();
+        let parsed = cmdline::parse(state.mode.get_cmdline());
         if parsed.is_err() {
-            self.mode = Mode::Normal(String::new());
+            self.state.do_send(actor::IntoNormalMode).unwrap();
             return Signal::Nope;
         }
         let (_, cmd) = parsed.unwrap();
@@ -255,141 +244,47 @@ impl Editor {
             Write(filename) => {
                 let f = File::create(filename).unwrap();
                 let mut w = BufWriter::new(f);
-                write!(w, "{}", self.buffer.as_str()).unwrap();
+                write!(w, "{}", state.buffer.as_str()).unwrap();
             }
             Quit => return Signal::Quit,
         }
-        self.mode = Mode::Normal(String::new());
+        self.state.do_send(actor::IntoNormalMode).unwrap();
         Signal::Nope
     }
 
-    fn handle_insert_mode(&mut self, k: Key) {
+    async fn handle_insert_mode(&mut self, k: Key) {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.buffer.insert_char(
-                        self.cursor.col,
-                        self.cursor.row + self.row_offset,
-                        '\n',
-                    );
-                    self.cursor.row += 1;
-                    self.cursor.col = 0;
+                    self.state
+                        .do_send(actor::HandleState(|state: &mut State| {
+                            state.buffer.insert_char(
+                                state.cursor.col,
+                                state.cursor.row + state.row_offset,
+                                '\n',
+                            );
+                        }))
+                        .unwrap();
+                    self.state.do_send(actor::CursorDown(1)).unwrap();
+                    self.state.do_send(actor::CursorLineHead).unwrap();
                     // scroll();
                     return;
                 }
-                self.buffer
-                    .insert_char(self.cursor.col, self.cursor.row + self.row_offset, c);
-                self.cursor.col += 1;
+                self.state
+                    .do_send(actor::HandleState(move |state: &mut State| {
+                        state.buffer.insert_char(
+                            state.cursor.col,
+                            state.cursor.row + state.row_offset,
+                            c,
+                        );
+                    }))
+                    .unwrap();
+                self.state.do_send(actor::CursorRight(1)).unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
-                self.mode = Mode::Normal(String::new());
+                self.state.do_send(actor::IntoNormalMode).unwrap();
             }
             _ => {}
-        }
-    }
-
-    pub(crate) fn run(&mut self) {
-        self.draw();
-        let stdin = stdin();
-        for k in stdin.keys() {
-            write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
-            self.stdout.flush().unwrap();
-
-            match &mut self.mode {
-                Mode::Normal(cmd) => {
-                    match k.unwrap() {
-                        Key::Char(c) => cmd.push(c),
-                        Key::Ctrl(c) => cmd.push_str(&format!("<C-{}>", c)),
-                        Key::Up => cmd.push_str("<Up>"),
-                        Key::Down => cmd.push_str("<Down>"),
-                        Key::Left => cmd.push_str("<Left>"),
-                        Key::Right => cmd.push_str("<Right>"),
-                        Key::Esc => cmd.push_str("<Esc>"),
-                        _ => {}
-                    };
-                    self.handle_normal_mode();
-                }
-                Mode::Insert => self.handle_insert_mode(k.unwrap()),
-                Mode::CmdLine(cmd) => {
-                    match k.unwrap() {
-                        Key::Char('\n') => {
-                            let signal = self.handle_cmd_line_mode();
-                            if Signal::Quit == signal {
-                                break;
-                            }
-                        }
-                        Key::Char(c) => cmd.push(c),
-                        Key::Backspace => {
-                            cmd.pop();
-                        }
-                        Key::Esc | Key::Ctrl('c') => {
-                            self.mode = Mode::Normal(String::new());
-                        }
-                        _ => {}
-                    };
-                }
-            }
-            self.coerce_cursor();
-            self.draw();
-        }
-    }
-
-    fn coerce_cursor(&mut self) {
-        self.cursor.row = min(self.cursor.row, self.buffer.count_lines().saturating_sub(1));
-
-        let textarea_row = (self.size.1 - 3) as usize;
-        let actual_row = textarea_row - self.wrap_offset();
-        if self.cursor.row > actual_row {
-            self.row_offset += self.cursor.row - actual_row;
-            self.row_offset = min(
-                self.row_offset,
-                self.buffer.count_lines().saturating_sub(actual_row),
-            );
-            self.cursor.row = actual_row;
-        }
-        self.cursor.col = min(
-            self.cursor.col,
-            self.buffer.row_len(self.cursor.row + self.row_offset),
-        );
-    }
-
-    fn wrap_offset(&mut self) -> usize {
-        let mut wraps = 0;
-        let mut lines_count = 0;
-        for line in self.buffer.lines().skip(self.row_offset) {
-            let wrap = (line.len() as u16) / self.size.0;
-            wraps += wrap;
-            lines_count += 1 + wrap;
-            if lines_count >= self.size.1 - 2 {
-                break;
-            }
-        }
-        wraps as usize
-    }
-}
-
-impl From<Buffer> for Editor {
-    fn from(b: Buffer) -> Self {
-        let mode = Mode::Normal(String::new());
-
-        let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
-        write!(
-            stdout,
-            "{}{}",
-            termion::clear::All,
-            termion::cursor::Goto(1, 1)
-        )
-        .unwrap();
-        let size = terminal_size().unwrap();
-
-        Editor {
-            mode,
-            size,
-            stdout,
-            buffer: b,
-            row_offset: 0,
-            cursor: Cursor::default(),
-            yanked: Buffer::default(),
         }
     }
 }
