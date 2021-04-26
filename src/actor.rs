@@ -1,7 +1,7 @@
-use core::cmp::min;
 use crate::buffer::Buffer;
 use crate::renderer;
 use crate::renderer::Renderer;
+use core::cmp::min;
 use termion::terminal_size;
 use xtra::prelude::*;
 
@@ -114,7 +114,9 @@ impl StateActor {
         }
         let col = min(
             self.state.cursor.col,
-            self.state.buffer.row_len(self.state.cursor.row + self.state.row_offset),
+            self.state
+                .buffer
+                .row_len(self.state.cursor.row + self.state.row_offset),
         );
         self.state.cursor.col = col;
     }

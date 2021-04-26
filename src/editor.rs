@@ -113,9 +113,7 @@ impl Editor {
             }
             CursorUp => {
                 if state.cursor.row == 0 {
-                    self.state
-                        .do_send(actor::SubRowOffset(cmd.count))
-                        .unwrap();
+                    self.state.do_send(actor::SubRowOffset(cmd.count)).unwrap();
                     self.state
                         .do_send(actor::HandleState(|state: &mut State| {
                             state.mode.get_cmd_mut().clear();
@@ -126,9 +124,7 @@ impl Editor {
                 self.state.do_send(actor::CursorUp(cmd.count)).unwrap();
             }
             CursorRight => {
-                self.state
-                    .do_send(actor::CursorRight(cmd.count))
-                    .unwrap();
+                self.state.do_send(actor::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
                 let count = state
