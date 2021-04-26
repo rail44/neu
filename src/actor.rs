@@ -1,3 +1,4 @@
+use core::cmp::min;
 use crate::buffer::Buffer;
 use crate::renderer;
 use crate::renderer::Renderer;
@@ -94,7 +95,46 @@ impl StateActor {
 impl Actor for StateActor {}
 
 impl StateActor {
-    async fn notify(&self) {
+    fn coerce_cursor(&mut self) {
+        let row = min(
+            self.state.cursor.row,
+            self.state.buffer.count_lines().saturating_sub(1),
+        );
+        self.state.cursor.row = row;
+
+        let textarea_row = (self.state.size.1 - 3) as usize;
+        let actual_row = textarea_row - self.wrap_offset();
+        if self.state.cursor.row > actual_row {
+            let row_offset = min(
+                self.state.row_offset + self.state.cursor.row - actual_row,
+                self.state.buffer.count_lines().saturating_sub(actual_row),
+            );
+            self.state.row_offset = row_offset;
+            self.state.cursor.row = actual_row;
+        }
+        let col = min(
+            self.state.cursor.col,
+            self.state.buffer.row_len(self.state.cursor.row + self.state.row_offset),
+        );
+        self.state.cursor.col = col;
+    }
+
+    fn wrap_offset(&self) -> usize {
+        let mut wraps = 0;
+        let mut lines_count = 0;
+        for line in self.state.buffer.lines().skip(self.state.row_offset) {
+            let wrap = (line.len() as u16) / self.state.size.0;
+            wraps += wrap;
+            lines_count += 1 + wrap;
+            if lines_count >= self.state.size.1 - 2 {
+                break;
+            }
+        }
+        wraps as usize
+    }
+
+    async fn notify(&mut self) {
+        self.coerce_cursor();
         self.renderer
             .send(renderer::Render(self.state.clone()))
             .await
