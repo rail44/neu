@@ -197,6 +197,10 @@ impl Message for CursorUp {
 #[async_trait::async_trait]
 impl Handler<CursorUp> for Store {
     async fn handle(&mut self, msg: CursorUp, _ctx: &mut Context<Self>) {
+        if self.state.cursor.row == 0 {
+            self.state.row_offset = self.state.row_offset.saturating_sub(msg.0);
+            return;
+        }
         self.state.cursor.row = self.state.cursor.row.saturating_sub(msg.0);
     }
 }
@@ -391,5 +395,132 @@ impl Message for Notify {
 impl Handler<Notify> for Store {
     async fn handle(&mut self, _msg: Notify, _ctx: &mut Context<Self>) {
         self.notify().await;
+    }
+}
+
+pub(crate) struct ForwardWord(pub(crate) usize);
+impl Message for ForwardWord {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<ForwardWord> for Store {
+    async fn handle(&mut self, msg: ForwardWord, ctx: &mut Context<Self>) {
+        let count = self
+            .state
+            .buffer
+            .count_forward_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset);
+        self.handle(CursorRight(count * msg.0), ctx).await;
+    }
+}
+
+pub(crate) struct BackWord(pub(crate) usize);
+impl Message for BackWord {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<BackWord> for Store {
+    async fn handle(&mut self, msg: BackWord, ctx: &mut Context<Self>) {
+        let count = self.state
+            .buffer
+            .count_back_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset);
+        self.handle(CursorLeft(count * msg.0), ctx).await;
+    }
+}
+
+pub(crate) struct RemoveChars(pub(crate) usize);
+impl Message for RemoveChars {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<RemoveChars> for Store {
+    async fn handle(&mut self, msg: RemoveChars, ctx: &mut Context<Self>) {
+        let yank = self.state.buffer.remove_chars(
+            self.state.cursor.col,
+            self.state.cursor.row + self.state.row_offset,
+            msg.0,
+        );
+        self.handle(SetYank(yank), ctx).await;
+    }
+}
+
+pub(crate) struct RemoveLines(pub(crate) usize);
+impl Message for RemoveLines {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<RemoveLines> for Store {
+    async fn handle(&mut self, msg: RemoveLines, ctx: &mut Context<Self>) {
+        let yank = self.state
+            .buffer
+            .remove_lines(self.state.cursor.row + self.state.row_offset, msg.0);
+        self.handle(SetYank(yank), ctx).await;
+    }
+}
+
+pub(crate) struct YankLines(pub(crate) usize);
+impl Message for YankLines {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<YankLines> for Store {
+    async fn handle(&mut self, msg: YankLines, ctx: &mut Context<Self>) {
+        let yank = self
+            .state
+            .buffer
+            .subseq_lines(self.state.cursor.row + self.state.row_offset, msg.0);
+        self.handle(SetYank(yank), ctx).await;
+    }
+}
+
+pub(crate) struct AppendYank(pub(crate) usize);
+impl Message for AppendYank {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<AppendYank> for Store {
+    async fn handle(&mut self, msg: AppendYank, ctx: &mut Context<Self>) {
+        let col = if self.state.yanked.end_with_line_break() {
+            self.handle(CursorDown(1), ctx).await;
+            0
+        } else {
+            self.handle(CursorRight(1), ctx).await;
+            self.state.cursor.col
+        };
+        for _ in 0..msg.0 {
+            self.state.buffer.insert(
+                col,
+                self.state.cursor.row + self.state.row_offset,
+                self.state.yanked.clone(),
+            );
+        }
+    }
+}
+
+pub(crate) struct InsertYank(pub(crate) usize);
+impl Message for InsertYank {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<InsertYank> for Store {
+    async fn handle(&mut self, msg: InsertYank, _ctx: &mut Context<Self>) {
+        let col = if self.state.yanked.end_with_line_break() {
+            0
+        } else {
+            self.state.cursor.col
+        };
+        for _ in 0..msg.0 {
+            self.state.buffer.insert(
+                col,
+                self.state.cursor.row + self.state.row_offset,
+                self.state.yanked.clone(),
+            );
+        }
     }
 }

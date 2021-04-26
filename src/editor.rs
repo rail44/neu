@@ -113,31 +113,16 @@ impl Editor {
                 self.store.do_send(store::CursorDown(cmd.count)).unwrap();
             }
             CursorUp => {
-                if state.cursor.row == 0 {
-                    self.store.do_send(store::SubRowOffset(cmd.count)).unwrap();
-                    self.store
-                        .do_send(store::HandleState(|store: &mut State| {
-                            store.mode.get_cmd_mut().clear();
-                        }))
-                        .unwrap();
-                    return;
-                }
                 self.store.do_send(store::CursorUp(cmd.count)).unwrap();
             }
             CursorRight => {
                 self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
-                let count = state
-                    .buffer
-                    .count_forward_word(state.cursor.col, state.cursor.row + state.row_offset);
-                self.store.do_send(store::CursorRight(count)).unwrap();
+                self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
             }
             BackWord => {
-                let count = state
-                    .buffer
-                    .count_back_word(state.cursor.col, state.cursor.row + state.row_offset);
-                self.store.do_send(store::CursorLeft(count)).unwrap();
+                self.store.do_send(store::BackWord(cmd.count)).unwrap();
             }
             IntoInsertMode => {
                 self.store.do_send(store::IntoInsertMode).unwrap();
@@ -150,74 +135,19 @@ impl Editor {
                 self.store.do_send(store::IntoCmdLineMode).unwrap();
             }
             RemoveChar => {
-                let yank = self
-                    .store
-                    .send(store::HandleState(move |state: &mut State| {
-                        state.buffer.remove_chars(
-                            state.cursor.col,
-                            state.cursor.row + state.row_offset,
-                            cmd.count,
-                        )
-                    }))
-                    .await
-                    .unwrap();
-                self.store.do_send(store::SetYank(yank)).unwrap();
+                self.store.do_send(store::RemoveChars(cmd.count)).unwrap();
             }
             RemoveLine => {
-                let yank = self
-                    .store
-                    .send(store::HandleState(move |state: &mut State| {
-                        state
-                            .buffer
-                            .remove_lines(state.cursor.row + state.row_offset, cmd.count)
-                    }))
-                    .await
-                    .unwrap();
-                self.store.do_send(store::SetYank(yank)).unwrap();
+                self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
             }
             YankLine => {
-                let yank = state
-                    .buffer
-                    .subseq_lines(state.cursor.row + state.row_offset, cmd.count);
-                self.store.do_send(store::SetYank(yank)).unwrap();
+                self.store.do_send(store::YankLines(cmd.count)).unwrap();
             }
             AppendYank => {
-                let col = if state.yanked.end_with_line_break() {
-                    self.store.do_send(store::CursorDown(1)).unwrap();
-                    0
-                } else {
-                    self.store.do_send(store::CursorRight(1)).unwrap();
-                    state.cursor.col
-                };
-                for _ in 0..cmd.count {
-                    self.store
-                        .do_send(store::HandleState(move |state: &mut State| {
-                            state.buffer.insert(
-                                col,
-                                state.cursor.row + state.row_offset,
-                                state.yanked.clone(),
-                            );
-                        }))
-                        .unwrap();
-                }
+                self.store.do_send(store::AppendYank(cmd.count)).unwrap();
             }
             InsertYank => {
-                let col = if state.yanked.end_with_line_break() {
-                    0
-                } else {
-                    state.cursor.col
-                };
-                for _ in 0..cmd.count {
-                    self.store
-                        .do_send(store::HandleState(move |state: &mut State| {
-                            state.buffer.insert(
-                                col,
-                                state.cursor.row + state.row_offset,
-                                state.yanked.clone(),
-                            );
-                        }))
-                        .unwrap();
-                }
+                self.store.do_send(store::InsertYank(cmd.count)).unwrap();
             }
             Escape => {}
         }
