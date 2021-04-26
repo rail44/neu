@@ -6,10 +6,10 @@ use termion::input::TermRead;
 
 use xtra::prelude::*;
 
-use crate::actor;
-use crate::actor::{Mode, State, StateActor};
 use crate::cmd;
 use crate::cmdline;
+use crate::store;
+use crate::store::{Mode, State, Store};
 
 #[derive(PartialEq)]
 enum Signal {
@@ -18,7 +18,7 @@ enum Signal {
 }
 
 pub(crate) struct Editor {
-    state: Address<StateActor>,
+    store: Address<Store>,
 }
 
 impl Actor for Editor {}
@@ -33,34 +33,34 @@ impl Handler<Run> for Editor {
     async fn handle(&mut self, _msg: Run, _ctx: &mut Context<Self>) {
         let stdin = stdin();
         for k in stdin.keys() {
-            let state = self.state.send(actor::GetState).await.unwrap();
+            let state = self.store.send(store::GetState).await.unwrap();
             match &state.mode {
                 Mode::Normal(_) => {
                     match k.unwrap() {
-                        Key::Char(c) => self.state.do_send(actor::PushCmd(c)).unwrap(),
+                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
                         Key::Ctrl(c) => self
-                            .state
-                            .do_send(actor::PushCmdStr(format!("<C-{}>", c)))
+                            .store
+                            .do_send(store::PushCmdStr(format!("<C-{}>", c)))
                             .unwrap(),
                         Key::Up => self
-                            .state
-                            .do_send(actor::PushCmdStr("<Up>".to_string()))
+                            .store
+                            .do_send(store::PushCmdStr("<Up>".to_string()))
                             .unwrap(),
                         Key::Down => self
-                            .state
-                            .do_send(actor::PushCmdStr("<Down>".to_string()))
+                            .store
+                            .do_send(store::PushCmdStr("<Down>".to_string()))
                             .unwrap(),
                         Key::Left => self
-                            .state
-                            .do_send(actor::PushCmdStr("<Left>".to_string()))
+                            .store
+                            .do_send(store::PushCmdStr("<Left>".to_string()))
                             .unwrap(),
                         Key::Right => self
-                            .state
-                            .do_send(actor::PushCmdStr("<Right>".to_string()))
+                            .store
+                            .do_send(store::PushCmdStr("<Right>".to_string()))
                             .unwrap(),
                         Key::Esc => self
-                            .state
-                            .do_send(actor::PushCmdStr("<Esc>".to_string()))
+                            .store
+                            .do_send(store::PushCmdStr("<Esc>".to_string()))
                             .unwrap(),
                         _ => {}
                     };
@@ -75,29 +75,29 @@ impl Handler<Run> for Editor {
                                 break;
                             }
                         }
-                        Key::Char(c) => self.state.do_send(actor::PushCmd(c)).unwrap(),
+                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
                         Key::Backspace => {
-                            self.state.do_send(actor::PopCmd).unwrap();
+                            self.store.do_send(store::PopCmd).unwrap();
                         }
                         Key::Esc | Key::Ctrl('c') => {
-                            self.state.do_send(actor::IntoNormalMode).unwrap();
+                            self.store.do_send(store::IntoNormalMode).unwrap();
                         }
                         _ => {}
                     };
                 }
             }
-            self.state.send(actor::Notify).await.unwrap();
+            self.store.send(store::Notify).await.unwrap();
         }
     }
 }
 
 impl Editor {
-    pub(crate) fn new(state: Address<StateActor>) -> Self {
-        Editor { state }
+    pub(crate) fn new(store: Address<Store>) -> Self {
+        Editor { store }
     }
 
     async fn handle_normal_mode(&mut self) {
-        let state = self.state.send(actor::GetState).await.unwrap();
+        let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmd::parse(state.mode.get_cmd());
         if parsed.is_err() {
             return;
@@ -107,52 +107,52 @@ impl Editor {
         use cmd::CmdKind::*;
         match cmd.kind {
             CursorLeft => {
-                self.state.do_send(actor::CursorLeft(cmd.count)).unwrap();
+                self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
             }
             CursorDown => {
-                self.state.do_send(actor::CursorDown(cmd.count)).unwrap();
+                self.store.do_send(store::CursorDown(cmd.count)).unwrap();
             }
             CursorUp => {
                 if state.cursor.row == 0 {
-                    self.state.do_send(actor::SubRowOffset(cmd.count)).unwrap();
-                    self.state
-                        .do_send(actor::HandleState(|state: &mut State| {
-                            state.mode.get_cmd_mut().clear();
+                    self.store.do_send(store::SubRowOffset(cmd.count)).unwrap();
+                    self.store
+                        .do_send(store::HandleState(|store: &mut State| {
+                            store.mode.get_cmd_mut().clear();
                         }))
                         .unwrap();
                     return;
                 }
-                self.state.do_send(actor::CursorUp(cmd.count)).unwrap();
+                self.store.do_send(store::CursorUp(cmd.count)).unwrap();
             }
             CursorRight => {
-                self.state.do_send(actor::CursorRight(cmd.count)).unwrap();
+                self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
                 let count = state
                     .buffer
                     .count_forward_word(state.cursor.col, state.cursor.row + state.row_offset);
-                self.state.do_send(actor::CursorRight(count)).unwrap();
+                self.store.do_send(store::CursorRight(count)).unwrap();
             }
             BackWord => {
                 let count = state
                     .buffer
                     .count_back_word(state.cursor.col, state.cursor.row + state.row_offset);
-                self.state.do_send(actor::CursorLeft(count)).unwrap();
+                self.store.do_send(store::CursorLeft(count)).unwrap();
             }
             IntoInsertMode => {
-                self.state.do_send(actor::IntoInsertMode).unwrap();
+                self.store.do_send(store::IntoInsertMode).unwrap();
             }
             IntoAppendMode => {
-                self.state.do_send(actor::CursorRight(1)).unwrap();
-                self.state.do_send(actor::IntoInsertMode).unwrap();
+                self.store.do_send(store::CursorRight(1)).unwrap();
+                self.store.do_send(store::IntoInsertMode).unwrap();
             }
             IntoCmdLineMode => {
-                self.state.do_send(actor::IntoCmdLineMode).unwrap();
+                self.store.do_send(store::IntoCmdLineMode).unwrap();
             }
             RemoveChar => {
                 let yank = self
-                    .state
-                    .send(actor::HandleState(move |state: &mut State| {
+                    .store
+                    .send(store::HandleState(move |state: &mut State| {
                         state.buffer.remove_chars(
                             state.cursor.col,
                             state.cursor.row + state.row_offset,
@@ -161,37 +161,37 @@ impl Editor {
                     }))
                     .await
                     .unwrap();
-                self.state.do_send(actor::SetYank(yank)).unwrap();
+                self.store.do_send(store::SetYank(yank)).unwrap();
             }
             RemoveLine => {
                 let yank = self
-                    .state
-                    .send(actor::HandleState(move |state: &mut State| {
+                    .store
+                    .send(store::HandleState(move |state: &mut State| {
                         state
                             .buffer
                             .remove_lines(state.cursor.row + state.row_offset, cmd.count)
                     }))
                     .await
                     .unwrap();
-                self.state.do_send(actor::SetYank(yank)).unwrap();
+                self.store.do_send(store::SetYank(yank)).unwrap();
             }
             YankLine => {
                 let yank = state
                     .buffer
                     .subseq_lines(state.cursor.row + state.row_offset, cmd.count);
-                self.state.do_send(actor::SetYank(yank)).unwrap();
+                self.store.do_send(store::SetYank(yank)).unwrap();
             }
             AppendYank => {
                 let col = if state.yanked.end_with_line_break() {
-                    self.state.do_send(actor::CursorDown(1)).unwrap();
+                    self.store.do_send(store::CursorDown(1)).unwrap();
                     0
                 } else {
-                    self.state.do_send(actor::CursorRight(1)).unwrap();
+                    self.store.do_send(store::CursorRight(1)).unwrap();
                     state.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.state
-                        .do_send(actor::HandleState(move |state: &mut State| {
+                    self.store
+                        .do_send(store::HandleState(move |state: &mut State| {
                             state.buffer.insert(
                                 col,
                                 state.cursor.row + state.row_offset,
@@ -208,8 +208,8 @@ impl Editor {
                     state.cursor.col
                 };
                 for _ in 0..cmd.count {
-                    self.state
-                        .do_send(actor::HandleState(move |state: &mut State| {
+                    self.store
+                        .do_send(store::HandleState(move |state: &mut State| {
                             state.buffer.insert(
                                 col,
                                 state.cursor.row + state.row_offset,
@@ -221,8 +221,8 @@ impl Editor {
             }
             Escape => {}
         }
-        self.state
-            .do_send(actor::HandleState(move |state: &mut State| {
+        self.store
+            .do_send(store::HandleState(move |state: &mut State| {
                 if let Mode::Normal(ref mut cmd) = state.mode {
                     cmd.clear();
                 }
@@ -231,10 +231,10 @@ impl Editor {
     }
 
     async fn handle_cmd_line_mode(&mut self) -> Signal {
-        let state = self.state.send(actor::GetState).await.unwrap();
+        let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmdline::parse(state.mode.get_cmdline());
         if parsed.is_err() {
-            self.state.do_send(actor::IntoNormalMode).unwrap();
+            self.store.do_send(store::IntoNormalMode).unwrap();
             return Signal::Nope;
         }
         let (_, cmd) = parsed.unwrap();
@@ -248,7 +248,7 @@ impl Editor {
             }
             Quit => return Signal::Quit,
         }
-        self.state.do_send(actor::IntoNormalMode).unwrap();
+        self.store.do_send(store::IntoNormalMode).unwrap();
         Signal::Nope
     }
 
@@ -256,8 +256,8 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.state
-                        .do_send(actor::HandleState(|state: &mut State| {
+                    self.store
+                        .do_send(store::HandleState(|state: &mut State| {
                             state.buffer.insert_char(
                                 state.cursor.col,
                                 state.cursor.row + state.row_offset,
@@ -265,13 +265,12 @@ impl Editor {
                             );
                         }))
                         .unwrap();
-                    self.state.do_send(actor::CursorDown(1)).unwrap();
-                    self.state.do_send(actor::CursorLineHead).unwrap();
-                    // scroll();
+                    self.store.do_send(store::CursorDown(1)).unwrap();
+                    self.store.do_send(store::CursorLineHead).unwrap();
                     return;
                 }
-                self.state
-                    .do_send(actor::HandleState(move |state: &mut State| {
+                self.store
+                    .do_send(store::HandleState(move |state: &mut State| {
                         state.buffer.insert_char(
                             state.cursor.col,
                             state.cursor.row + state.row_offset,
@@ -279,10 +278,10 @@ impl Editor {
                         );
                     }))
                     .unwrap();
-                self.state.do_send(actor::CursorRight(1)).unwrap();
+                self.store.do_send(store::CursorRight(1)).unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
-                self.state.do_send(actor::IntoNormalMode).unwrap();
+                self.store.do_send(store::IntoNormalMode).unwrap();
             }
             _ => {}
         }
