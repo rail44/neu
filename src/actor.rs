@@ -1,6 +1,7 @@
-use crate::editor;
-use crate::editor::Editor;
 use crate::buffer::Buffer;
+use crate::renderer;
+use crate::renderer::Renderer;
+use termion::terminal_size;
 use xtra::prelude::*;
 
 #[derive(Clone, Debug)]
@@ -31,14 +32,13 @@ impl Mode {
         panic!();
     }
 
-pub(crate) fn get_cmdline(&self) -> &String {
+    pub(crate) fn get_cmdline(&self) -> &String {
         if let Mode::CmdLine(cmd) = self {
             return cmd;
         }
         panic!();
     }
 }
-
 
 #[derive(Default, Clone, Debug)]
 pub(crate) struct Cursor {
@@ -52,36 +52,53 @@ pub(crate) struct State {
     pub(crate) cursor: Cursor,
     pub(crate) mode: Mode,
     pub(crate) yanked: Buffer,
+    pub(crate) size: (u16, u16),
+    pub(crate) buffer: Buffer,
 }
 
-#[derive(Default)]
+impl State {
+    pub(crate) fn new() -> Self {
+        let size = terminal_size().unwrap();
+
+        Self {
+            size,
+            ..Default::default()
+        }
+    }
+}
+
 pub(crate) struct StateActor {
     state: State,
-    editor_addr: Option<Address<Editor>>,
+    renderer: Address<Renderer>,
+}
+
+impl StateActor {
+    pub(crate) async fn new(renderer: Address<Renderer>) -> Self {
+        let state = State::new();
+        renderer
+            .send(renderer::Render(state.clone()))
+            .await
+            .unwrap();
+        Self {
+            renderer,
+            state: State::new(),
+        }
+    }
+
+    pub(crate) async fn set_buffer(&mut self, buffer: Buffer) {
+        self.state.buffer = buffer;
+        self.notify().await;
+    }
 }
 
 impl Actor for StateActor {}
 
 impl StateActor {
     async fn notify(&self) {
-        if let Some(editor) = &self.editor_addr {
-            editor
-                .send(editor::ChangeState(self.state.clone()))
-                .await
-                .unwrap();
-        }
-    }
-}
-
-pub(crate) struct Subscribe(pub(crate) Address<Editor>);
-impl Message for Subscribe {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<Subscribe> for StateActor {
-    async fn handle(&mut self, msg: Subscribe, _ctx: &mut Context<Self>) {
-        self.editor_addr = Some(msg.0);
+        self.renderer
+            .send(renderer::Render(self.state.clone()))
+            .await
+            .unwrap();
     }
 }
 
@@ -251,5 +268,91 @@ impl Handler<SetYank> for StateActor {
     async fn handle(&mut self, msg: SetYank, _ctx: &mut Context<Self>) {
         self.state.yanked = msg.0;
         self.notify().await;
+    }
+}
+
+pub(crate) struct HandleState<F>(pub(crate) F);
+impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Message for HandleState<F> {
+    type Result = V;
+}
+
+#[async_trait::async_trait]
+impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Handler<HandleState<F>> for StateActor {
+    async fn handle(&mut self, msg: HandleState<F>, _ctx: &mut Context<Self>) -> V {
+        let v = msg.0(&mut self.state);
+        self.notify().await;
+        v
+    }
+}
+
+pub(crate) struct GetState;
+impl Message for GetState {
+    type Result = State;
+}
+
+#[async_trait::async_trait]
+impl Handler<GetState> for StateActor {
+    async fn handle(&mut self, _msg: GetState, _ctx: &mut Context<Self>) -> State {
+        self.state.clone()
+    }
+}
+
+pub(crate) struct PushCmd(pub(crate) char);
+impl Message for PushCmd {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<PushCmd> for StateActor {
+    async fn handle(&mut self, msg: PushCmd, _ctx: &mut Context<Self>) {
+        match &mut self.state.mode {
+            Mode::Normal(cmd) => {
+                cmd.push(msg.0);
+            }
+            Mode::Insert => (),
+            Mode::CmdLine(cmd) => {
+                cmd.push(msg.0);
+            }
+        }
+    }
+}
+
+pub(crate) struct PushCmdStr(pub(crate) String);
+impl Message for PushCmdStr {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<PushCmdStr> for StateActor {
+    async fn handle(&mut self, msg: PushCmdStr, _ctx: &mut Context<Self>) {
+        match &mut self.state.mode {
+            Mode::Normal(cmd) => {
+                cmd.push_str(&msg.0);
+            }
+            Mode::Insert => (),
+            Mode::CmdLine(cmd) => {
+                cmd.push_str(&msg.0);
+            }
+        }
+    }
+}
+
+pub(crate) struct PopCmd;
+impl Message for PopCmd {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<PopCmd> for StateActor {
+    async fn handle(&mut self, _msg: PopCmd, _ctx: &mut Context<Self>) {
+        match &mut self.state.mode {
+            Mode::Normal(cmd) => {
+                cmd.pop();
+            }
+            Mode::Insert => (),
+            Mode::CmdLine(cmd) => {
+                cmd.pop();
+            }
+        }
     }
 }
