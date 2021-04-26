@@ -71,7 +71,7 @@ impl Buffer {
         self.0.edit(start..start, buffer);
     }
 
-    pub(crate) fn count_forward_word(&mut self, col: usize, row: usize) -> usize {
+    pub(crate) fn count_forward_word(&self, col: usize, row: usize) -> usize {
         let start = self.get_offset_by_cursor(col, row);
         let mut cursor = Cursor::new(&self.0, start);
 
@@ -93,7 +93,7 @@ impl Buffer {
         i
     }
 
-    pub(crate) fn count_back_word(&mut self, col: usize, row: usize) -> usize {
+    pub(crate) fn count_back_word(&self, col: usize, row: usize) -> usize {
         let start = self.get_offset_by_cursor(col, row);
         let mut cursor = Cursor::new(&self.0, start);
 
