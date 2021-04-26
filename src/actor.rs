@@ -75,15 +75,12 @@ pub(crate) struct StateActor {
 
 impl StateActor {
     pub(crate) async fn new(renderer: Address<Renderer>) -> Self {
-        let state = State::new();
-        renderer
-            .send(renderer::Render(state.clone()))
-            .await
-            .unwrap();
-        Self {
+        let mut actor = Self {
             renderer,
             state: State::new(),
-        }
+        };
+        actor.notify().await;
+        actor
     }
 
     pub(crate) async fn set_buffer(&mut self, buffer: Buffer) {
@@ -153,7 +150,6 @@ impl Message for AddRowOffset {
 impl Handler<AddRowOffset> for StateActor {
     async fn handle(&mut self, msg: AddRowOffset, _ctx: &mut Context<Self>) {
         self.state.row_offset += msg.0;
-        self.notify().await;
     }
 }
 
@@ -166,7 +162,6 @@ impl Message for SubRowOffset {
 impl Handler<SubRowOffset> for StateActor {
     async fn handle(&mut self, msg: SubRowOffset, _ctx: &mut Context<Self>) {
         self.state.row_offset = self.state.row_offset.saturating_sub(msg.0);
-        self.notify().await;
     }
 }
 
@@ -179,7 +174,6 @@ impl Message for CursorLeft {
 impl Handler<CursorLeft> for StateActor {
     async fn handle(&mut self, msg: CursorLeft, _ctx: &mut Context<Self>) {
         self.state.cursor.col = self.state.cursor.col.saturating_sub(msg.0);
-        self.notify().await;
     }
 }
 
@@ -192,7 +186,6 @@ impl Message for CursorDown {
 impl Handler<CursorDown> for StateActor {
     async fn handle(&mut self, msg: CursorDown, _ctx: &mut Context<Self>) {
         self.state.cursor.row += msg.0;
-        self.notify().await;
     }
 }
 
@@ -205,7 +198,6 @@ impl Message for CursorUp {
 impl Handler<CursorUp> for StateActor {
     async fn handle(&mut self, msg: CursorUp, _ctx: &mut Context<Self>) {
         self.state.cursor.row = self.state.cursor.row.saturating_sub(msg.0);
-        self.notify().await;
     }
 }
 
@@ -218,7 +210,6 @@ impl Message for CursorRight {
 impl Handler<CursorRight> for StateActor {
     async fn handle(&mut self, msg: CursorRight, _ctx: &mut Context<Self>) {
         self.state.cursor.col += msg.0;
-        self.notify().await;
     }
 }
 
@@ -231,7 +222,6 @@ impl Message for CursorLineHead {
 impl Handler<CursorLineHead> for StateActor {
     async fn handle(&mut self, _msg: CursorLineHead, _ctx: &mut Context<Self>) {
         self.state.cursor.col = 0;
-        self.notify().await;
     }
 }
 
@@ -244,7 +234,6 @@ impl Message for CursorRow {
 impl Handler<CursorRow> for StateActor {
     async fn handle(&mut self, msg: CursorRow, _ctx: &mut Context<Self>) {
         self.state.cursor.row = msg.0;
-        self.notify().await;
     }
 }
 
@@ -257,7 +246,6 @@ impl Message for CursorCol {
 impl Handler<CursorCol> for StateActor {
     async fn handle(&mut self, msg: CursorCol, _ctx: &mut Context<Self>) {
         self.state.cursor.col = msg.0;
-        self.notify().await;
     }
 }
 
@@ -270,7 +258,6 @@ impl Message for IntoNormalMode {
 impl Handler<IntoNormalMode> for StateActor {
     async fn handle(&mut self, _msg: IntoNormalMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::Normal(String::new());
-        self.notify().await;
     }
 }
 
@@ -283,7 +270,6 @@ impl Message for IntoInsertMode {
 impl Handler<IntoInsertMode> for StateActor {
     async fn handle(&mut self, _msg: IntoInsertMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::Insert;
-        self.notify().await;
     }
 }
 
@@ -296,7 +282,6 @@ impl Message for IntoCmdLineMode {
 impl Handler<IntoCmdLineMode> for StateActor {
     async fn handle(&mut self, _msg: IntoCmdLineMode, _ctx: &mut Context<Self>) {
         self.state.mode = Mode::CmdLine(String::new());
-        self.notify().await;
     }
 }
 
@@ -309,7 +294,6 @@ impl Message for SetYank {
 impl Handler<SetYank> for StateActor {
     async fn handle(&mut self, msg: SetYank, _ctx: &mut Context<Self>) {
         self.state.yanked = msg.0;
-        self.notify().await;
     }
 }
 
@@ -322,7 +306,6 @@ impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Message for HandleSta
 impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Handler<HandleState<F>> for StateActor {
     async fn handle(&mut self, msg: HandleState<F>, _ctx: &mut Context<Self>) -> V {
         let v = msg.0(&mut self.state);
-        self.notify().await;
         v
     }
 }
@@ -396,5 +379,17 @@ impl Handler<PopCmd> for StateActor {
                 cmd.pop();
             }
         }
+    }
+}
+
+pub(crate) struct Notify;
+impl Message for Notify {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<Notify> for StateActor {
+    async fn handle(&mut self, _msg: Notify, _ctx: &mut Context<Self>) {
+        self.notify().await;
     }
 }

@@ -86,6 +86,7 @@ impl Handler<Run> for Editor {
                     };
                 }
             }
+            self.state.send(actor::Notify).await.unwrap();
         }
     }
 }
