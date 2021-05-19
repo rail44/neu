@@ -6,6 +6,8 @@ use xtra::spawn::Smol;
 
 mod buffer;
 mod cmd;
+mod motion;
+mod operate;
 mod cmdline;
 mod editor;
 mod renderer;

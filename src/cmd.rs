@@ -14,40 +14,24 @@ pub(crate) struct Cmd {
 }
 
 pub(crate) enum CmdKind {
-    CursorLeft,
-    CursorDown,
-    CursorUp,
-    CursorRight,
+    RemoveChar,
     IntoInsertMode,
     IntoAppendMode,
     IntoCmdLineMode,
-    RemoveChar,
-    RemoveLine,
-    YankLine,
     AppendYank,
     InsertYank,
     Escape,
-    ForwardWord,
-    BackWord,
 }
 
 fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
     use CmdKind::*;
     alt((
-        map(alt((tag("h"), tag("<Left>"))), |_| CursorLeft),
-        map(alt((tag("j"), tag("<Down>"))), |_| CursorDown),
-        map(alt((tag("k"), tag("<Up>"))), |_| CursorUp),
-        map(alt((tag("l"), tag("<Right>"))), |_| CursorRight),
+        map(tag("x"), |_| RemoveChar),
         map(tag("i"), |_| IntoInsertMode),
         map(tag("a"), |_| IntoAppendMode),
         map(tag(":"), |_| IntoCmdLineMode),
-        map(tag("x"), |_| RemoveChar),
-        map(tag("dd"), |_| RemoveLine),
-        map(tag("yy"), |_| YankLine),
         map(tag("p"), |_| AppendYank),
         map(tag("P"), |_| InsertYank),
-        map(tag("w"), |_| ForwardWord),
-        map(tag("b"), |_| BackWord),
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
             |_| Escape,
