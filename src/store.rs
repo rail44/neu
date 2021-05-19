@@ -1,6 +1,8 @@
 use crate::buffer::Buffer;
 use crate::renderer;
 use crate::renderer::Renderer;
+use crate::operate::Operate;
+
 use core::cmp::min;
 use termion::terminal_size;
 use xtra::prelude::*;
@@ -8,6 +10,7 @@ use xtra::prelude::*;
 #[derive(Clone, Debug)]
 pub(crate) enum Mode {
     Normal(String),
+    Pending(Operate, String),
     Insert,
     CmdLine(String),
 }
@@ -289,6 +292,18 @@ impl Handler<IntoCmdLineMode> for Store {
     }
 }
 
+pub(crate) struct IntoPendingMode(pub Operate);
+impl Message for IntoPendingMode {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<IntoPendingMode> for Store {
+    async fn handle(&mut self, msg: IntoPendingMode, _ctx: &mut Context<Self>) {
+        self.state.mode = Mode::Pending(msg.0, String::new());
+    }
+}
+
 pub(crate) struct SetYank(pub(crate) Buffer);
 impl Message for SetYank {
     type Result = ();
@@ -338,6 +353,9 @@ impl Handler<PushCmd> for Store {
             Mode::Normal(cmd) => {
                 cmd.push(msg.0);
             }
+            Mode::Pending(_, cmd) => {
+                cmd.push(msg.0);
+            },
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push(msg.0);
@@ -358,6 +376,9 @@ impl Handler<PushCmdStr> for Store {
             Mode::Normal(cmd) => {
                 cmd.push_str(&msg.0);
             }
+            Mode::Pending(_, cmd) => {
+                cmd.push_str(&msg.0);
+            },
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push_str(&msg.0);
@@ -376,6 +397,9 @@ impl Handler<PopCmd> for Store {
     async fn handle(&mut self, _msg: PopCmd, _ctx: &mut Context<Self>) {
         match &mut self.state.mode {
             Mode::Normal(cmd) => {
+                cmd.pop();
+            }
+            Mode::Pending(_, cmd) => {
                 cmd.pop();
             }
             Mode::Insert => (),

@@ -10,6 +10,8 @@ use crate::cmd;
 use crate::cmdline;
 use crate::store;
 use crate::store::{Mode, State, Store};
+use crate::motion;
+use crate::operate;
 
 #[derive(PartialEq)]
 enum Signal {
@@ -66,6 +68,9 @@ impl Handler<Run> for Editor {
                     };
                     self.handle_normal_mode().await;
                 }
+                &Mode::Pending(_, _) => {
+                    self.handle_pending_mode().await;
+                }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()).await,
                 Mode::CmdLine(_) => {
                     match k.unwrap() {
@@ -96,15 +101,17 @@ impl Editor {
         Editor { store }
     }
 
-    async fn handle_normal_mode(&mut self) {
+    async fn handle_motion(&mut self) {
         let state = self.store.send(store::GetState).await.unwrap();
-        let parsed = cmd::parse(state.mode.get_cmd());
+        let parsed = motion::parse(state.mode.get_cmd());
+
         if parsed.is_err() {
             return;
         }
+
         let (_, cmd) = parsed.unwrap();
 
-        use cmd::CmdKind::*;
+        use motion::MotionKind::*;
         match cmd.kind {
             CursorLeft => {
                 self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
@@ -124,6 +131,83 @@ impl Editor {
             BackWord => {
                 self.store.do_send(store::BackWord(cmd.count)).unwrap();
             }
+            Line => ()
+        }
+        self.store
+            .do_send(store::HandleState(move |state: &mut State| {
+                if let Mode::Normal(ref mut cmd) = state.mode {
+                    cmd.clear();
+                }
+            }))
+            .unwrap();
+    }
+
+    async fn handle_pending_mode(&mut self) {
+        let state = self.store.send(store::GetState).await.unwrap();
+        let parsed = motion::parse(state.mode.get_cmd());
+
+        if parsed.is_err() {
+            return;
+        }
+
+        let (_, cmd) = parsed.unwrap();
+
+        use motion::MotionKind::*;
+        match cmd.kind {
+            CursorLeft => {
+                // self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
+            }
+            CursorDown => {
+                // self.store.do_send(store::CursorDown(cmd.count)).unwrap();
+            }
+            CursorUp => {
+                // self.store.do_send(store::CursorUp(cmd.count)).unwrap();
+            }
+            CursorRight => {
+                // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
+            }
+            ForwardWord => {
+                // self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
+            }
+            BackWord => {
+                // self.store.do_send(store::BackWord(cmd.count)).unwrap();
+            }
+            Line => {
+                self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
+            }
+        }
+        self.store
+            .do_send(store::HandleState(move |state: &mut State| {
+                if let Mode::Normal(ref mut cmd) = state.mode {
+                    cmd.clear();
+                }
+            }))
+            .unwrap();
+    }
+
+    async fn handle_operate(&mut self) {
+        let state = self.store.send(store::GetState).await.unwrap();
+        let parsed = operate::parse(state.mode.get_cmd());
+
+        if parsed.is_err() {
+            return self.handle_motion().await;
+        }
+
+        let (_, operate) = parsed.unwrap();
+
+        self.store.do_send(store::IntoPendingMode(operate)).unwrap();
+    }
+
+    async fn handle_normal_mode(&mut self) {
+        let state = self.store.send(store::GetState).await.unwrap();
+        let parsed = cmd::parse(state.mode.get_cmd());
+        if parsed.is_err() {
+            return self.handle_operate().await;
+        }
+        let (_, cmd) = parsed.unwrap();
+
+        use cmd::CmdKind::*;
+        match cmd.kind {
             IntoInsertMode => {
                 self.store.do_send(store::IntoInsertMode).unwrap();
             }
@@ -136,12 +220,6 @@ impl Editor {
             }
             RemoveChar => {
                 self.store.do_send(store::RemoveChars(cmd.count)).unwrap();
-            }
-            RemoveLine => {
-                self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
-            }
-            YankLine => {
-                self.store.do_send(store::YankLines(cmd.count)).unwrap();
             }
             AppendYank => {
                 self.store.do_send(store::AppendYank(cmd.count)).unwrap();

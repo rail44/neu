@@ -60,7 +60,7 @@ impl Handler<Render> for Renderer {
         )
         .unwrap();
         match &state.mode {
-            Mode::Normal(cmd) => {
+            Mode::Normal(cmd) | Mode::Pending(_, cmd)  => {
                 if cmd.is_empty() {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
                 } else {
