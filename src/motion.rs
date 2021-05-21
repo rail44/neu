@@ -1,10 +1,6 @@
 use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::digit0,
-    combinator::map,
-    sequence::pair,
-    IResult,
+    branch::alt, bytes::complete::tag, character::complete::digit0, combinator::map,
+    sequence::pair, IResult,
 };
 
 pub(crate) struct Motion {
@@ -35,7 +31,7 @@ fn motion_kind(input: &str) -> IResult<&str, MotionKind> {
         map(tag("y"), |_| Line),
     ))(input)
 }
-        
+
 fn motion(input: &str) -> IResult<&str, Motion> {
     map(pair(digit0, motion_kind), |(n, kind)| {
         let count = n.parse().unwrap_or(1);

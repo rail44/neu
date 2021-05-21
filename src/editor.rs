@@ -8,10 +8,10 @@ use xtra::prelude::*;
 
 use crate::cmd;
 use crate::cmdline;
-use crate::store;
-use crate::store::{Mode, State, Store};
 use crate::motion;
 use crate::operate;
+use crate::store;
+use crate::store::{Mode, State, Store};
 
 #[derive(PartialEq)]
 enum Signal {
@@ -104,9 +104,9 @@ impl Handler<Run> for Editor {
                     match k.unwrap() {
                         Key::Char('\n') => {
                             let signal = self.handle_cmd_line_mode().await;
-                        if Signal::Quit == signal {
-                            break;
-                        }
+                            if Signal::Quit == signal {
+                                break;
+                            }
                         }
                         Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
                         Key::Backspace => {
@@ -159,7 +159,7 @@ impl Editor {
             BackWord => {
                 self.store.do_send(store::BackWord(cmd.count)).unwrap();
             }
-            Line => ()
+            Line => (),
         }
         self.store
             .do_send(store::HandleState(move |state: &mut State| {
@@ -179,6 +179,8 @@ impl Editor {
         }
 
         let (_, cmd) = parsed.unwrap();
+        let cursor = state.cursor;
+        let cursor_offset = state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
 
         use motion::MotionKind::*;
         match cmd.kind {
@@ -196,11 +198,16 @@ impl Editor {
             }
             ForwardWord => {
                 let count = self.store.send(store::CountWordForward).await.unwrap();
-                self.store.do_send(store::RemoveChars(count)).unwrap();
+                self.store
+                    .do_send(store::Remove(cursor_offset, cursor_offset + count))
+                    .unwrap();
             }
             BackWord => {
-                // let count = self.store.send(store::CountWordBack).await.unwrap();
-                // self.store.do_send(store::RemoveChars(count)).unwrap();
+                let count = self.store.send(store::CountWordBack).await.unwrap();
+                self.store
+                    .do_send(store::Remove(cursor_offset - count, cursor_offset))
+                    .unwrap();
+                self.store.do_send(store::CursorLeft(count)).unwrap();
             }
             Line => {
                 self.store.do_send(store::RemoveLines(cmd.count)).unwrap();

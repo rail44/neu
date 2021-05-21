@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
+use crate::operate::Operate;
 use crate::renderer;
 use crate::renderer::Renderer;
-use crate::operate::Operate;
 
 use core::cmp::min;
 use termion::terminal_size;
@@ -359,7 +359,7 @@ impl Handler<PushCmd> for Store {
             }
             Mode::Pending(_, cmd) => {
                 cmd.push(msg.0);
-            },
+            }
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push(msg.0);
@@ -382,7 +382,7 @@ impl Handler<PushCmdStr> for Store {
             }
             Mode::Pending(_, cmd) => {
                 cmd.push_str(&msg.0);
-            },
+            }
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push_str(&msg.0);
@@ -434,10 +434,10 @@ impl Message for ForwardWord {
 #[async_trait::async_trait]
 impl Handler<ForwardWord> for Store {
     async fn handle(&mut self, msg: ForwardWord, ctx: &mut Context<Self>) {
-        let count = self
-            .state
-            .buffer
-            .count_forward_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset);
+        let count = self.state.buffer.count_forward_word(
+            self.state.cursor.col,
+            self.state.cursor.row + self.state.row_offset,
+        );
         self.handle(CursorRight(count * msg.0), ctx).await;
     }
 }
@@ -450,9 +450,10 @@ impl Message for BackWord {
 #[async_trait::async_trait]
 impl Handler<BackWord> for Store {
     async fn handle(&mut self, msg: BackWord, ctx: &mut Context<Self>) {
-        let count = self.state
-            .buffer
-            .count_back_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset);
+        let count = self.state.buffer.count_back_word(
+            self.state.cursor.col,
+            self.state.cursor.row + self.state.row_offset,
+        );
         self.handle(CursorLeft(count * msg.0), ctx).await;
     }
 }
@@ -482,7 +483,8 @@ impl Message for RemoveLines {
 #[async_trait::async_trait]
 impl Handler<RemoveLines> for Store {
     async fn handle(&mut self, msg: RemoveLines, ctx: &mut Context<Self>) {
-        let yank = self.state
+        let yank = self
+            .state
             .buffer
             .remove_lines(self.state.cursor.row + self.state.row_offset, msg.0);
         self.handle(SetYank(yank), ctx).await;
@@ -501,6 +503,19 @@ impl Handler<YankLines> for Store {
             .state
             .buffer
             .subseq_lines(self.state.cursor.row + self.state.row_offset, msg.0);
+        self.handle(SetYank(yank), ctx).await;
+    }
+}
+
+pub(crate) struct Remove(pub(crate) usize, pub(crate) usize);
+impl Message for Remove {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<Remove> for Store {
+    async fn handle(&mut self, msg: Remove, ctx: &mut Context<Self>) {
+        let yank = self.state.buffer.remove(msg.0..msg.1);
         self.handle(SetYank(yank), ctx).await;
     }
 }
@@ -561,10 +576,10 @@ impl Message for CountWordForward {
 #[async_trait::async_trait]
 impl Handler<CountWordForward> for Store {
     async fn handle(&mut self, _msg: CountWordForward, _ctx: &mut Context<Self>) -> usize {
-        self
-            .state
-            .buffer
-            .count_forward_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset)
+        self.state.buffer.count_forward_word(
+            self.state.cursor.col,
+            self.state.cursor.row + self.state.row_offset,
+        )
     }
 }
 
@@ -576,9 +591,9 @@ impl Message for CountWordBack {
 #[async_trait::async_trait]
 impl Handler<CountWordBack> for Store {
     async fn handle(&mut self, _msg: CountWordBack, _ctx: &mut Context<Self>) -> usize {
-        self.state
-            .buffer
-            .count_back_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset)
+        self.state.buffer.count_back_word(
+            self.state.cursor.col,
+            self.state.cursor.row + self.state.row_offset,
+        )
     }
 }
-

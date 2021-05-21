@@ -1,10 +1,6 @@
 use nom::{
-    branch::alt,
-    bytes::complete::tag,
-    character::complete::digit0,
-    combinator::map,
-    sequence::pair,
-    IResult,
+    branch::alt, bytes::complete::tag, character::complete::digit0, combinator::map,
+    sequence::pair, IResult,
 };
 
 #[derive(Clone, Debug)]
@@ -21,10 +17,7 @@ pub(crate) enum OperateKind {
 
 fn operate_kind(input: &str) -> IResult<&str, OperateKind> {
     use OperateKind::*;
-    alt((
-        map(tag("d"), |_| Remove),
-        map(tag("y"), |_| Yank),
-    ))(input)
+    alt((map(tag("d"), |_| Remove), map(tag("y"), |_| Yank)))(input)
 }
 
 fn operate(input: &str) -> IResult<&str, Operate> {

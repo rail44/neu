@@ -77,7 +77,7 @@ impl Buffer {
 
         let mut i = 0;
         while let Some(c) = cursor.next_codepoint() {
-            if !is_alpha(&c) {
+            if !is_alpha(&c) || c == '\n' {
                 break;
             }
             i += 1;
@@ -85,7 +85,7 @@ impl Buffer {
 
         while let Some(c) = cursor.next_codepoint() {
             i += 1;
-            if is_alpha(&c) {
+            if !is_alpha(&c) || c == '\n' {
                 break;
             }
         }
@@ -106,7 +106,7 @@ impl Buffer {
         }
 
         while let Some(c) = cursor.prev_codepoint() {
-            if !is_alpha(&c) {
+            if !is_alpha(&c) || c == '\n' {
                 break;
             }
             i += 1;
@@ -119,6 +119,12 @@ impl Buffer {
         let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
         let range = start..end;
+        let seq = self.0.subseq(range.clone());
+        self.0.edit(range, Rope::default());
+        seq.into()
+    }
+
+    pub(crate) fn remove<I: IntervalBounds + Clone>(&mut self, range: I) -> Buffer {
         let seq = self.0.subseq(range.clone());
         self.0.edit(range, Rope::default());
         seq.into()
