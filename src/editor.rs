@@ -69,6 +69,34 @@ impl Handler<Run> for Editor {
                     self.handle_normal_mode().await;
                 }
                 &Mode::Pending(_, _) => {
+                    match k.unwrap() {
+                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
+                        Key::Ctrl(c) => self
+                            .store
+                            .do_send(store::PushCmdStr(format!("<C-{}>", c)))
+                            .unwrap(),
+                        Key::Up => self
+                            .store
+                            .do_send(store::PushCmdStr("<Up>".to_string()))
+                            .unwrap(),
+                        Key::Down => self
+                            .store
+                            .do_send(store::PushCmdStr("<Down>".to_string()))
+                            .unwrap(),
+                        Key::Left => self
+                            .store
+                            .do_send(store::PushCmdStr("<Left>".to_string()))
+                            .unwrap(),
+                        Key::Right => self
+                            .store
+                            .do_send(store::PushCmdStr("<Right>".to_string()))
+                            .unwrap(),
+                        Key::Esc => self
+                            .store
+                            .do_send(store::PushCmdStr("<Esc>".to_string()))
+                            .unwrap(),
+                        _ => {}
+                    };
                     self.handle_pending_mode().await;
                 }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()).await,
@@ -76,9 +104,9 @@ impl Handler<Run> for Editor {
                     match k.unwrap() {
                         Key::Char('\n') => {
                             let signal = self.handle_cmd_line_mode().await;
-                            if Signal::Quit == signal {
-                                break;
-                            }
+                        if Signal::Quit == signal {
+                            break;
+                        }
                         }
                         Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
                         Key::Backspace => {
@@ -167,22 +195,18 @@ impl Editor {
                 // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
-                // self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
+                let count = self.store.send(store::CountWordForward).await.unwrap();
+                self.store.do_send(store::RemoveChars(count)).unwrap();
             }
             BackWord => {
-                // self.store.do_send(store::BackWord(cmd.count)).unwrap();
+                // let count = self.store.send(store::CountWordBack).await.unwrap();
+                // self.store.do_send(store::RemoveChars(count)).unwrap();
             }
             Line => {
                 self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
             }
         }
-        self.store
-            .do_send(store::HandleState(move |state: &mut State| {
-                if let Mode::Normal(ref mut cmd) = state.mode {
-                    cmd.clear();
-                }
-            }))
-            .unwrap();
+        self.store.do_send(store::IntoNormalMode).unwrap();
     }
 
     async fn handle_operate(&mut self) {

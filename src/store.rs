@@ -26,6 +26,10 @@ impl Mode {
         if let Mode::Normal(cmd) = self {
             return cmd;
         }
+
+        if let Mode::Pending(_, cmd) = self {
+            return cmd;
+        }
         panic!();
     }
 
@@ -548,3 +552,33 @@ impl Handler<InsertYank> for Store {
         }
     }
 }
+
+pub(crate) struct CountWordForward;
+impl Message for CountWordForward {
+    type Result = usize;
+}
+
+#[async_trait::async_trait]
+impl Handler<CountWordForward> for Store {
+    async fn handle(&mut self, _msg: CountWordForward, _ctx: &mut Context<Self>) -> usize {
+        self
+            .state
+            .buffer
+            .count_forward_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset)
+    }
+}
+
+pub(crate) struct CountWordBack;
+impl Message for CountWordBack {
+    type Result = usize;
+}
+
+#[async_trait::async_trait]
+impl Handler<CountWordBack> for Store {
+    async fn handle(&mut self, _msg: CountWordBack, _ctx: &mut Context<Self>) -> usize {
+        self.state
+            .buffer
+            .count_back_word(self.state.cursor.col, self.state.cursor.row + self.state.row_offset)
+    }
+}
+
