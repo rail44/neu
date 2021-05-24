@@ -8,8 +8,8 @@ use xtra::prelude::*;
 
 use crate::cmd;
 use crate::cmdline;
-use crate::motion;
-use crate::operate;
+use crate::selection;
+use crate::selection::Selection;
 use crate::store;
 use crate::store::{Mode, State, Store};
 
@@ -68,37 +68,6 @@ impl Handler<Run> for Editor {
                     };
                     self.handle_normal_mode().await;
                 }
-                &Mode::Pending(_, _) => {
-                    match k.unwrap() {
-                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
-                        Key::Ctrl(c) => self
-                            .store
-                            .do_send(store::PushCmdStr(format!("<C-{}>", c)))
-                            .unwrap(),
-                        Key::Up => self
-                            .store
-                            .do_send(store::PushCmdStr("<Up>".to_string()))
-                            .unwrap(),
-                        Key::Down => self
-                            .store
-                            .do_send(store::PushCmdStr("<Down>".to_string()))
-                            .unwrap(),
-                        Key::Left => self
-                            .store
-                            .do_send(store::PushCmdStr("<Left>".to_string()))
-                            .unwrap(),
-                        Key::Right => self
-                            .store
-                            .do_send(store::PushCmdStr("<Right>".to_string()))
-                            .unwrap(),
-                        Key::Esc => self
-                            .store
-                            .do_send(store::PushCmdStr("<Esc>".to_string()))
-                            .unwrap(),
-                        _ => {}
-                    };
-                    self.handle_pending_mode().await;
-                }
                 Mode::Insert => self.handle_insert_mode(k.unwrap()).await,
                 Mode::CmdLine(_) => {
                     match k.unwrap() {
@@ -129,111 +98,55 @@ impl Editor {
         Editor { store }
     }
 
-    async fn handle_motion(&mut self) {
+    async fn handle_selection(&mut self, s: Selection) -> (usize, usize) {
         let state = self.store.send(store::GetState).await.unwrap();
-        let parsed = motion::parse(state.mode.get_cmd());
 
-        if parsed.is_err() {
-            return;
-        }
-
-        let (_, cmd) = parsed.unwrap();
-
-        use motion::MotionKind::*;
-        match cmd.kind {
-            CursorLeft => {
-                self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
-            }
-            CursorDown => {
-                self.store.do_send(store::CursorDown(cmd.count)).unwrap();
-            }
-            CursorUp => {
-                self.store.do_send(store::CursorUp(cmd.count)).unwrap();
-            }
-            CursorRight => {
-                self.store.do_send(store::CursorRight(cmd.count)).unwrap();
-            }
-            ForwardWord => {
-                self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
-            }
-            BackWord => {
-                self.store.do_send(store::BackWord(cmd.count)).unwrap();
-            }
-            Line => (),
-        }
-        self.store
-            .do_send(store::HandleState(move |state: &mut State| {
-                if let Mode::Normal(ref mut cmd) = state.mode {
-                    cmd.clear();
-                }
-            }))
-            .unwrap();
-    }
-
-    async fn handle_pending_mode(&mut self) {
-        let state = self.store.send(store::GetState).await.unwrap();
-        let parsed = motion::parse(state.mode.get_cmd());
-
-        if parsed.is_err() {
-            return;
-        }
-
-        let (_, cmd) = parsed.unwrap();
         let cursor = state.cursor;
         let cursor_offset = state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
 
-        use motion::MotionKind::*;
-        match cmd.kind {
-            CursorLeft => {
+        use selection::SelectionKind::*;
+        match s.kind {
+            Left => {
+                unimplemented!();
                 // self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
             }
-            CursorDown => {
+            Down => {
+                unimplemented!();
                 // self.store.do_send(store::CursorDown(cmd.count)).unwrap();
             }
-            CursorUp => {
+            Up => {
+                unimplemented!();
                 // self.store.do_send(store::CursorUp(cmd.count)).unwrap();
             }
-            CursorRight => {
+            Right => {
+                unimplemented!();
                 // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
                 let count = self.store.send(store::CountWordForward).await.unwrap();
-                self.store
-                    .do_send(store::Remove(cursor_offset, cursor_offset + count))
-                    .unwrap();
+                (cursor_offset, cursor_offset + count)
             }
             BackWord => {
                 let count = self.store.send(store::CountWordBack).await.unwrap();
-                self.store
-                    .do_send(store::Remove(cursor_offset - count, cursor_offset))
-                    .unwrap();
-                self.store.do_send(store::CursorLeft(count)).unwrap();
+                (cursor_offset - count, cursor_offset)
+            }
+            Word => {
+                let forward_count = self.store.send(store::CountWordForward).await.unwrap();
+                let back_count = self.store.send(store::CountWordBack).await.unwrap();
+                (cursor_offset - back_count, cursor_offset + forward_count)
             }
             Line => {
-                self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
+                unimplemented!();
+                // self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
             }
         }
-        self.store.do_send(store::IntoNormalMode).unwrap();
-    }
-
-    async fn handle_operate(&mut self) {
-        let state = self.store.send(store::GetState).await.unwrap();
-        let parsed = operate::parse(state.mode.get_cmd());
-
-        if parsed.is_err() {
-            return self.handle_motion().await;
-        }
-
-        let (_, operate) = parsed.unwrap();
-
-        self.store.do_send(store::IntoPendingMode(operate)).unwrap();
     }
 
     async fn handle_normal_mode(&mut self) {
         let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmd::parse(state.mode.get_cmd());
         if parsed.is_err() {
-            return self.handle_operate().await;
+            return;
         }
         let (_, cmd) = parsed.unwrap();
 
@@ -259,6 +172,33 @@ impl Editor {
                 self.store.do_send(store::InsertYank(cmd.count)).unwrap();
             }
             Escape => {}
+            CursorLeft => {
+                self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
+            }
+            CursorDown => {
+                self.store.do_send(store::CursorDown(cmd.count)).unwrap();
+            }
+            CursorUp => {
+                self.store.do_send(store::CursorUp(cmd.count)).unwrap();
+            }
+            CursorRight => {
+                self.store.do_send(store::CursorRight(cmd.count)).unwrap();
+            }
+            ForwardWord => {
+                self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
+            }
+            BackWord => {
+                self.store.do_send(store::BackWord(cmd.count)).unwrap();
+            }
+            Remove(s) => {
+                let range = self.handle_selection(s).await;
+                self.store.do_send(store::Remove(range.0, range.1)).unwrap();
+                self.store.do_send(store::MoveTo(range.0)).unwrap();
+            }
+            Yank(s) => {
+                let range = self.handle_selection(s).await;
+                // self.store.do_send(store::Yank(range.0, range.1)).unwrap();
+            }
         }
         self.store
             .do_send(store::HandleState(move |state: &mut State| {

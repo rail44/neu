@@ -152,6 +152,12 @@ impl Buffer {
     pub(crate) fn end_with_line_break(&self) -> bool {
         self.last_char().map(|c| c == '\n').unwrap_or(false)
     }
+
+    pub(crate) fn get_cursor_by_offset(&self, offset: usize) -> (usize, usize) {
+        let row = self.0.line_of_offset(offset);
+        let row_offset = self.0.offset_of_line(row);
+        (row, offset - row_offset)
+    }
 }
 
 impl From<&str> for Buffer {

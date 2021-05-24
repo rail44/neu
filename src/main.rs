@@ -8,9 +8,8 @@ mod buffer;
 mod cmd;
 mod cmdline;
 mod editor;
-mod motion;
-mod operate;
 mod renderer;
+mod selection;
 mod store;
 
 use crate::buffer::Buffer;

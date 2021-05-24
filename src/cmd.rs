@@ -8,6 +8,9 @@ use nom::{
     IResult,
 };
 
+use crate::selection;
+use crate::selection::Selection;
+
 pub(crate) struct Cmd {
     pub(crate) count: usize,
     pub(crate) kind: CmdKind,
@@ -21,6 +24,24 @@ pub(crate) enum CmdKind {
     AppendYank,
     InsertYank,
     Escape,
+    CursorLeft,
+    CursorDown,
+    CursorUp,
+    CursorRight,
+    ForwardWord,
+    BackWord,
+    Remove(Selection),
+    Yank(Selection),
+}
+
+fn remove(input: &str) -> IResult<&str, CmdKind> {
+    map(pair(tag("d"), selection::parse), |(_, s)| {
+        CmdKind::Remove(s)
+    })(input)
+}
+
+fn yank(input: &str) -> IResult<&str, CmdKind> {
+    map(pair(tag("y"), selection::parse), |(_, s)| CmdKind::Yank(s))(input)
 }
 
 fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
@@ -32,6 +53,14 @@ fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
         map(tag(":"), |_| IntoCmdLineMode),
         map(tag("p"), |_| AppendYank),
         map(tag("P"), |_| InsertYank),
+        map(alt((tag("h"), tag("<Left>"))), |_| CursorLeft),
+        map(alt((tag("j"), tag("<Down>"))), |_| CursorDown),
+        map(alt((tag("k"), tag("<Up>"))), |_| CursorUp),
+        map(alt((tag("l"), tag("<Right>"))), |_| CursorRight),
+        map(tag("w"), |_| ForwardWord),
+        map(tag("b"), |_| BackWord),
+        remove,
+        yank,
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
             |_| Escape,

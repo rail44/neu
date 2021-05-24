@@ -1,5 +1,4 @@
 use crate::buffer::Buffer;
-use crate::operate::Operate;
 use crate::renderer;
 use crate::renderer::Renderer;
 
@@ -10,7 +9,6 @@ use xtra::prelude::*;
 #[derive(Clone, Debug)]
 pub(crate) enum Mode {
     Normal(String),
-    Pending(Operate, String),
     Insert,
     CmdLine(String),
 }
@@ -27,9 +25,6 @@ impl Mode {
             return cmd;
         }
 
-        if let Mode::Pending(_, cmd) = self {
-            return cmd;
-        }
         panic!();
     }
 
@@ -296,18 +291,6 @@ impl Handler<IntoCmdLineMode> for Store {
     }
 }
 
-pub(crate) struct IntoPendingMode(pub Operate);
-impl Message for IntoPendingMode {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<IntoPendingMode> for Store {
-    async fn handle(&mut self, msg: IntoPendingMode, _ctx: &mut Context<Self>) {
-        self.state.mode = Mode::Pending(msg.0, String::new());
-    }
-}
-
 pub(crate) struct SetYank(pub(crate) Buffer);
 impl Message for SetYank {
     type Result = ();
@@ -328,8 +311,7 @@ impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Message for HandleSta
 #[async_trait::async_trait]
 impl<F: 'static + FnOnce(&mut State) -> V + Send, V: Send> Handler<HandleState<F>> for Store {
     async fn handle(&mut self, msg: HandleState<F>, _ctx: &mut Context<Self>) -> V {
-        let v = msg.0(&mut self.state);
-        v
+        msg.0(&mut self.state)
     }
 }
 
@@ -357,9 +339,6 @@ impl Handler<PushCmd> for Store {
             Mode::Normal(cmd) => {
                 cmd.push(msg.0);
             }
-            Mode::Pending(_, cmd) => {
-                cmd.push(msg.0);
-            }
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push(msg.0);
@@ -380,9 +359,6 @@ impl Handler<PushCmdStr> for Store {
             Mode::Normal(cmd) => {
                 cmd.push_str(&msg.0);
             }
-            Mode::Pending(_, cmd) => {
-                cmd.push_str(&msg.0);
-            }
             Mode::Insert => (),
             Mode::CmdLine(cmd) => {
                 cmd.push_str(&msg.0);
@@ -401,9 +377,6 @@ impl Handler<PopCmd> for Store {
     async fn handle(&mut self, _msg: PopCmd, _ctx: &mut Context<Self>) {
         match &mut self.state.mode {
             Mode::Normal(cmd) => {
-                cmd.pop();
-            }
-            Mode::Pending(_, cmd) => {
                 cmd.pop();
             }
             Mode::Insert => (),
@@ -595,5 +568,19 @@ impl Handler<CountWordBack> for Store {
             self.state.cursor.col,
             self.state.cursor.row + self.state.row_offset,
         )
+    }
+}
+
+pub(crate) struct MoveTo(pub usize);
+impl Message for MoveTo {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<MoveTo> for Store {
+    async fn handle(&mut self, msg: MoveTo, _ctx: &mut Context<Self>) {
+        let result = self.state.buffer.get_cursor_by_offset(msg.0);
+        self.state.cursor.row = result.0;
+        self.state.cursor.col = result.1;
     }
 }
