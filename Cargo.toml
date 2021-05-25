@@ -3,6 +3,8 @@ name = "neu"
 version = "0.0.0"
 authors = ["Satoshi Amemiya <amemiya@protonmail.com>"]
 edition = "2018"
+description = "vi like text editor"
+license = "Unlicense"
 
 [dependencies]
 async-trait = "0.1.48"
