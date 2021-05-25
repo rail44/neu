@@ -63,4 +63,14 @@ impl State {
             ..Default::default()
         }
     }
+
+    pub(crate) fn count_word_back(&self) -> usize {
+        self.buffer
+            .count_back_word(self.cursor.col, self.cursor.row + self.row_offset)
+    }
+
+    pub(crate) fn count_word_forward(&self) -> usize {
+        self.buffer
+            .count_forward_word(self.cursor.col, self.cursor.row + self.row_offset)
+    }
 }

@@ -102,7 +102,7 @@ impl Editor {
     async fn handle_selection(&self, s: Selection) -> (usize, usize) {
         let state = self.store.send(store::GetState).await.unwrap();
 
-        let cursor = state.cursor;
+        let cursor = &state.cursor;
         let cursor_offset = state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
 
         use selection::SelectionKind::*;
@@ -124,16 +124,16 @@ impl Editor {
                 // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
-                let count = self.store.send(store::CountWordForward).await.unwrap();
+                let count = state.count_word_back();
                 (cursor_offset, cursor_offset + count)
             }
             BackWord => {
-                let count = self.store.send(store::CountWordBack).await.unwrap();
+                let count = state.count_word_forward();
                 (cursor_offset - count, cursor_offset)
             }
             Word => {
-                let forward_count = self.store.send(store::CountWordForward).await.unwrap();
-                let back_count = self.store.send(store::CountWordBack).await.unwrap();
+                let forward_count = state.count_word_forward();
+                let back_count = state.count_word_back();
                 (cursor_offset - back_count, cursor_offset + forward_count)
             }
             Line => {
