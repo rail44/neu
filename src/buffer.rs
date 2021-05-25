@@ -13,6 +13,14 @@ fn is_alpha(c: &char) -> bool {
     matches!(c, 'a'..='z' | 'A'..='Z' | '_')
 }
 
+fn is_whitespace(c: &char) -> bool {
+    matches!(c, ' ' | '\n')
+}
+
+fn is_symbol(c: &char) -> bool {
+    !is_alpha(c) && !is_whitespace(c)
+}
+
 impl Buffer {
     pub(crate) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
         let offset = self.0.offset_of_line(row);
@@ -67,19 +75,31 @@ impl Buffer {
         let start = self.get_offset_by_cursor(col, row);
         let mut cursor = Cursor::new(&self.0, start);
 
+        let c = cursor.next_codepoint().unwrap();
+        let b = is_alpha(&c);
+
         let mut i = 0;
         while let Some(c) = cursor.next_codepoint() {
-            if !is_alpha(&c) || c == '\n' {
+            i += 1;
+            if is_whitespace(&c) {
                 break;
             }
-            i += 1;
+
+            if b && is_symbol(&c) {
+                break;
+            }
+
+            if !b && is_alpha(&c) {
+                break;
+            }
         }
+        cursor.prev_codepoint();
 
         while let Some(c) = cursor.next_codepoint() {
-            i += 1;
-            if !is_alpha(&c) || c == '\n' {
+            if !is_whitespace(&c) {
                 break;
             }
+            i += 1;
         }
 
         i
@@ -123,7 +143,7 @@ impl Buffer {
     }
 
     pub(crate) fn subseq<I: IntervalBounds + Clone>(&mut self, range: I) -> Buffer {
-        let seq = self.0.subseq(range.clone());
+        let seq = self.0.subseq(range);
         seq.into()
     }
 
