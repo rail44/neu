@@ -79,30 +79,6 @@ impl Store {
     }
 }
 
-pub(crate) struct AddRowOffset(pub(crate) usize);
-impl Message for AddRowOffset {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<AddRowOffset> for Store {
-    async fn handle(&mut self, msg: AddRowOffset, _ctx: &mut Context<Self>) {
-        self.state.row_offset += msg.0;
-    }
-}
-
-pub(crate) struct SubRowOffset(pub(crate) usize);
-impl Message for SubRowOffset {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<SubRowOffset> for Store {
-    async fn handle(&mut self, msg: SubRowOffset, _ctx: &mut Context<Self>) {
-        self.state.row_offset = self.state.row_offset.saturating_sub(msg.0);
-    }
-}
-
 pub(crate) struct CursorLeft(pub(crate) usize);
 impl Message for CursorLeft {
     type Result = ();
@@ -164,30 +140,6 @@ impl Message for CursorLineHead {
 impl Handler<CursorLineHead> for Store {
     async fn handle(&mut self, _msg: CursorLineHead, _ctx: &mut Context<Self>) {
         self.state.cursor.col = 0;
-    }
-}
-
-pub(crate) struct CursorRow(pub(crate) usize);
-impl Message for CursorRow {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<CursorRow> for Store {
-    async fn handle(&mut self, msg: CursorRow, _ctx: &mut Context<Self>) {
-        self.state.cursor.row = msg.0;
-    }
-}
-
-pub(crate) struct CursorCol(pub(crate) usize);
-impl Message for CursorCol {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<CursorCol> for Store {
-    async fn handle(&mut self, msg: CursorCol, _ctx: &mut Context<Self>) {
-        self.state.cursor.col = msg.0;
     }
 }
 
@@ -425,6 +377,19 @@ impl Message for Remove {
 impl Handler<Remove> for Store {
     async fn handle(&mut self, msg: Remove, ctx: &mut Context<Self>) {
         let yank = self.state.buffer.remove(msg.0..msg.1);
+        self.handle(SetYank(yank), ctx).await;
+    }
+}
+
+pub(crate) struct Yank(pub(crate) usize, pub(crate) usize);
+impl Message for Yank {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<Yank> for Store {
+    async fn handle(&mut self, msg: Yank, ctx: &mut Context<Self>) {
+        let yank = self.state.buffer.subseq(msg.0..msg.1);
         self.handle(SetYank(yank), ctx).await;
     }
 }

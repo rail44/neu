@@ -124,11 +124,11 @@ impl Editor {
                 // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
             }
             ForwardWord => {
-                let count = state.count_word_back();
+                let count = state.count_word_forward();
                 (cursor_offset, cursor_offset + count)
             }
             BackWord => {
-                let count = state.count_word_forward();
+                let count = state.count_word_back();
                 (cursor_offset - count, cursor_offset)
             }
             Word => {
@@ -198,7 +198,7 @@ impl Editor {
             }
             Yank(s) => {
                 let range = self.handle_selection(s).await;
-                // self.store.do_send(store::Yank(range.0, range.1)).unwrap();
+                self.store.do_send(store::Yank(range.0, range.1)).unwrap();
             }
         }
         self.store

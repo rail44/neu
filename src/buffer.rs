@@ -14,10 +14,6 @@ fn is_alpha(c: &char) -> bool {
 }
 
 impl Buffer {
-    pub(crate) fn new() -> Self {
-        Buffer(Rope::default())
-    }
-
     pub(crate) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
         let offset = self.0.offset_of_line(row);
         offset + col
@@ -42,10 +38,6 @@ impl Buffer {
 
     pub(crate) fn lines(&self) -> impl Iterator<Item = Cow<'_, str>> + '_ {
         self.0.lines(..)
-    }
-
-    pub(crate) fn line(&self, n: usize) -> Option<Cow<'_, str>> {
-        self.lines().nth(n)
     }
 
     pub(crate) fn remove_lines(&mut self, row: usize, count: usize) -> Buffer {
@@ -127,6 +119,11 @@ impl Buffer {
     pub(crate) fn remove<I: IntervalBounds + Clone>(&mut self, range: I) -> Buffer {
         let seq = self.0.subseq(range.clone());
         self.0.edit(range, Rope::default());
+        seq.into()
+    }
+
+    pub(crate) fn subseq<I: IntervalBounds + Clone>(&mut self, range: I) -> Buffer {
+        let seq = self.0.subseq(range.clone());
         seq.into()
     }
 

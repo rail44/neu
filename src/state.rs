@@ -23,13 +23,6 @@ impl Mode {
         panic!();
     }
 
-    pub(crate) fn get_cmd_mut(&mut self) -> &mut String {
-        if let Mode::Normal(cmd) = self {
-            return cmd;
-        }
-        panic!();
-    }
-
     pub(crate) fn get_cmdline(&self) -> &String {
         if let Mode::CmdLine(cmd) = self {
             return cmd;
