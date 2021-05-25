@@ -98,7 +98,7 @@ impl Editor {
         Editor { store }
     }
 
-    async fn handle_selection(&mut self, s: Selection) -> (usize, usize) {
+    async fn handle_selection(&self, s: Selection) -> (usize, usize) {
         let state = self.store.send(store::GetState).await.unwrap();
 
         let cursor = state.cursor;
@@ -142,7 +142,7 @@ impl Editor {
         }
     }
 
-    async fn handle_normal_mode(&mut self) {
+    async fn handle_normal_mode(&self) {
         let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmd::parse(state.mode.get_cmd());
         if parsed.is_err() {
@@ -209,7 +209,7 @@ impl Editor {
             .unwrap();
     }
 
-    async fn handle_cmd_line_mode(&mut self) -> Signal {
+    async fn handle_cmd_line_mode(&self) -> Signal {
         let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmdline::parse(state.mode.get_cmdline());
         if parsed.is_err() {
@@ -231,7 +231,7 @@ impl Editor {
         Signal::Nope
     }
 
-    async fn handle_insert_mode(&mut self, k: Key) {
+    async fn handle_insert_mode(&self, k: Key) {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
