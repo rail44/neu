@@ -1,4 +1,4 @@
-use crate::store::{Mode, State};
+use crate::state::{Mode, State};
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use xtra::prelude::*;

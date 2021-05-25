@@ -10,6 +10,7 @@ mod cmdline;
 mod editor;
 mod renderer;
 mod selection;
+mod state;
 mod store;
 
 use crate::buffer::Buffer;

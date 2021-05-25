@@ -10,8 +10,9 @@ use crate::cmd;
 use crate::cmdline;
 use crate::selection;
 use crate::selection::Selection;
+use crate::state::{Mode, State};
 use crate::store;
-use crate::store::{Mode, State, Store};
+use crate::store::Store;
 
 #[derive(PartialEq)]
 enum Signal {
