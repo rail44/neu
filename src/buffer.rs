@@ -112,13 +112,25 @@ impl Buffer {
         let mut i = 0;
         while let Some(c) = cursor.prev_codepoint() {
             i += 1;
-            if is_alpha(&c) {
+            if !is_whitespace(&c) {
                 break;
             }
         }
+        cursor.next_codepoint();
+
+        let c = cursor.prev_codepoint().unwrap();
+        let b = is_alpha(&c);
 
         while let Some(c) = cursor.prev_codepoint() {
-            if !is_alpha(&c) || c == '\n' {
+            if is_whitespace(&c) {
+                break;
+            }
+
+            if b && is_symbol(&c) {
+                break;
+            }
+
+            if !b && is_alpha(&c) {
                 break;
             }
             i += 1;
