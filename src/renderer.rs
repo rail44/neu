@@ -33,6 +33,7 @@ impl Handler<Render> for Renderer {
         let mut wraps = 0;
         let mut drawed_lines_count = 0;
         let textarea_row = state.size.1 - 2;
+        let max_line_digit = format!("{}", state.buffer.lines().count()).chars().count();
         for (i, line) in state.buffer.lines().skip(state.row_offset).enumerate() {
             let wrap = (line.len() as u16) / state.size.0;
             drawed_lines_count += 1;
@@ -43,7 +44,14 @@ impl Handler<Render> for Renderer {
             } else {
                 line
             };
-            write!(self.stdout, "{}\r\n", line).unwrap();
+            write!(
+                self.stdout,
+                "{:max_line_digit$} {}\r\n",
+                state.row_offset + i + 1,
+                line,
+                max_line_digit = max_line_digit
+            )
+            .unwrap();
 
             if i < state.cursor.row {
                 wraps += wrap
@@ -81,9 +89,14 @@ impl Handler<Render> for Renderer {
                 .unwrap();
             }
         };
-        let col = state.cursor.col as u16 % state.size.0;
+        let col = state.cursor.col % (state.size.0 as usize);
         let row = state.cursor.row as u16 + state.cursor.col as u16 / state.size.0 + wraps;
-        write!(self.stdout, "{}", termion::cursor::Goto(col + 1, row + 1)).unwrap();
+        write!(
+            self.stdout,
+            "{}",
+            termion::cursor::Goto((max_line_digit + col + 2) as u16, row + 1)
+        )
+        .unwrap();
         self.stdout.flush().unwrap();
     }
 }
