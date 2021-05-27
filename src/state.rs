@@ -57,6 +57,11 @@ impl State {
         }
     }
 
+    pub(crate) fn get_cursor_offset(&self) -> usize {
+        self.buffer
+            .get_offset_by_cursor(self.cursor.col, self.cursor.row + self.row_offset)
+    }
+
     pub(crate) fn count_word_back(&self) -> usize {
         self.buffer
             .count_back_word(self.cursor.col, self.cursor.row + self.row_offset)

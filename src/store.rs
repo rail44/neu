@@ -451,7 +451,7 @@ impl Message for MoveTo {
 impl Handler<MoveTo> for Store {
     async fn handle(&mut self, msg: MoveTo, _ctx: &mut Context<Self>) {
         let result = self.state.buffer.get_cursor_by_offset(msg.0);
-        self.state.cursor.row = result.0;
+        self.state.cursor.row = result.0 - self.state.row_offset;
         self.state.cursor.col = result.1;
     }
 }

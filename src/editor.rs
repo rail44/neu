@@ -102,8 +102,7 @@ impl Editor {
     async fn handle_selection(&self, s: Selection) -> (usize, usize) {
         let state = self.store.send(store::GetState).await.unwrap();
 
-        let cursor = &state.cursor;
-        let cursor_offset = state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
+        let cursor_offset = state.get_cursor_offset();
 
         use selection::SelectionKind::*;
         match s.kind {
