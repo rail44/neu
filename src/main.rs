@@ -1,12 +1,14 @@
 use std::fs;
 
 use clap::{crate_authors, crate_version, Clap};
+use dirs::config_dir;
 use xtra::prelude::*;
 use xtra::spawn::Smol;
 
 mod buffer;
 mod cmd;
 mod cmdline;
+mod config;
 mod editor;
 mod renderer;
 mod selection;
@@ -25,6 +27,7 @@ struct Opts {
 }
 
 fn main() {
+    let config = config::parse(config_dir().unwrap().join("neu/config.toml")).unwrap_or_default();
     smol::block_on(async {
         let opts: Opts = Opts::parse();
         let renderer = Renderer::new().create(None).spawn(&mut Smol::Global);

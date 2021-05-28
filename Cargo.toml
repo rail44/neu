@@ -7,10 +7,15 @@ description = "vi like text editor"
 license = "Unlicense"
 
 [dependencies]
+anyhow = "1.0.40"
 async-trait = "0.1.48"
 clap = "3.0.0-beta.2"
+dirs = "3.0.2"
 nom = "6.1.2"
+serde = "1.0.126"
+serde_derive = "1.0.126"
 smol = "1.2.5"
 termion = "1.5.6"
+toml = "0.5.8"
 xi-rope = "0.3.0"
 xtra = { version = "0.5.1", features = ["with-smol-1"] }
