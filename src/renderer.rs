@@ -10,7 +10,8 @@ pub(crate) struct Renderer {
 impl Renderer {
     pub(crate) fn new() -> Self {
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
-        write!(stdout, "{}", termion::clear::All,).unwrap();
+        write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
+        write!(stdout, "{}", termion::clear::All).unwrap();
         Self { stdout }
     }
 }
@@ -97,6 +98,20 @@ impl Handler<Render> for Renderer {
             termion::cursor::Goto((max_line_digit + col + 2) as u16, row + 1)
         )
         .unwrap();
+        self.stdout.flush().unwrap();
+    }
+}
+
+pub(crate) struct Finish;
+
+impl Message for Finish {
+    type Result = ();
+}
+
+#[async_trait::async_trait]
+impl Handler<Finish> for Renderer {
+    async fn handle(&mut self, _msg: Finish, _ctx: &mut Context<Self>) {
+        write!(self.stdout, "{}", termion::screen::ToMainScreen).unwrap();
         self.stdout.flush().unwrap();
     }
 }
