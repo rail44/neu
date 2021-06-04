@@ -2,6 +2,7 @@ use crate::buffer::Buffer;
 use crate::renderer;
 use crate::renderer::Renderer;
 use crate::state::{Mode, State};
+use tracing::error;
 
 use core::cmp::min;
 use xtra::prelude::*;
@@ -127,6 +128,7 @@ impl Message for CursorRight {
 #[async_trait::async_trait]
 impl Handler<CursorRight> for Store {
     async fn handle(&mut self, msg: CursorRight, _ctx: &mut Context<Self>) {
+        error!("right test");
         self.state.cursor.col += msg.0;
     }
 }

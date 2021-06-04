@@ -17,7 +17,7 @@ serde_derive = "1.0.126"
 smol = "1.2.5"
 termion = "1.5.6"
 toml = "0.5.8"
-tracing = { git = "https://github.com/tokio-rs/tracing" }
+tracing = { git = "https://github.com/tokio-rs/tracing", features = ["release_max_level_warn"] }
 tracing-subscriber = { git = "https://github.com/tokio-rs/tracing" }
 xi-rope = "0.3.0"
 xtra = { version = "0.5.1", features = ["with-smol-1"] }
