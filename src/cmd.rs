@@ -8,44 +8,23 @@ use nom::{
     IResult,
 };
 
+use crate::action::{Action, ActionKind};
 use crate::selection;
-use crate::selection::Selection;
 
-pub(crate) struct Cmd {
-    pub(crate) count: usize,
-    pub(crate) kind: CmdKind,
-}
-
-pub(crate) enum CmdKind {
-    RemoveChar,
-    IntoInsertMode,
-    IntoAppendMode,
-    IntoCmdLineMode,
-    AppendYank,
-    InsertYank,
-    Escape,
-    CursorLeft,
-    CursorDown,
-    CursorUp,
-    CursorRight,
-    ForwardWord,
-    BackWord,
-    Remove(Selection),
-    Yank(Selection),
-}
-
-fn remove(input: &str) -> IResult<&str, CmdKind> {
+fn remove(input: &str) -> IResult<&str, ActionKind> {
     map(pair(tag("d"), selection::parse), |(_, s)| {
-        CmdKind::Remove(s)
+        ActionKind::Remove(s)
     })(input)
 }
 
-fn yank(input: &str) -> IResult<&str, CmdKind> {
-    map(pair(tag("y"), selection::parse), |(_, s)| CmdKind::Yank(s))(input)
+fn yank(input: &str) -> IResult<&str, ActionKind> {
+    map(pair(tag("y"), selection::parse), |(_, s)| {
+        ActionKind::Yank(s)
+    })(input)
 }
 
-fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
-    use CmdKind::*;
+fn action_kind(input: &str) -> IResult<&str, ActionKind> {
+    use ActionKind::*;
     alt((
         map(tag("x"), |_| RemoveChar),
         map(tag("i"), |_| IntoInsertMode),
@@ -63,18 +42,18 @@ fn cmd_kind(input: &str) -> IResult<&str, CmdKind> {
         yank,
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
-            |_| Escape,
+            |_| ClearCmd,
         ),
     ))(input)
 }
 
-fn cmd(input: &str) -> IResult<&str, Cmd> {
-    map(pair(digit0, cmd_kind), |(n, kind)| {
+fn cmd(input: &str) -> IResult<&str, Action> {
+    map(pair(digit0, action_kind), |(n, kind)| {
         let count = n.parse().unwrap_or(1);
-        Cmd { count, kind }
+        Action { count, kind }
     })(input)
 }
 
-pub(crate) fn parse(input: &str) -> IResult<&str, Cmd> {
+pub(crate) fn parse(input: &str) -> IResult<&str, Action> {
     cmd(input)
 }

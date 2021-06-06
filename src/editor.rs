@@ -6,11 +6,10 @@ use termion::input::TermRead;
 
 use xtra::prelude::*;
 
+use crate::action::ActionKind;
 use crate::cmd;
 use crate::cmdline;
-use crate::selection;
-use crate::selection::Selection;
-use crate::state::{Mode, State};
+use crate::state::Mode;
 use crate::store;
 use crate::store::Store;
 
@@ -40,30 +39,45 @@ impl Handler<Run> for Editor {
             match &state.mode {
                 Mode::Normal(_) => {
                     match k.unwrap() {
-                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
+                        Key::Char(c) => self
+                            .store
+                            .do_send(store::DispatchAction(ActionKind::PushCmd(c).once()))
+                            .unwrap(),
                         Key::Ctrl(c) => self
                             .store
-                            .do_send(store::PushCmdStr(format!("<C-{}>", c)))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr(format!("<C-{}>", c)).once(),
+                            ))
                             .unwrap(),
                         Key::Up => self
                             .store
-                            .do_send(store::PushCmdStr("<Up>".to_string()))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr("<Up>".to_string()).once(),
+                            ))
                             .unwrap(),
                         Key::Down => self
                             .store
-                            .do_send(store::PushCmdStr("<Down>".to_string()))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr("<Down>".to_string()).once(),
+                            ))
                             .unwrap(),
                         Key::Left => self
                             .store
-                            .do_send(store::PushCmdStr("<Left>".to_string()))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr("<Left>".to_string()).once(),
+                            ))
                             .unwrap(),
                         Key::Right => self
                             .store
-                            .do_send(store::PushCmdStr("<Right>".to_string()))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr("<Right>".to_string()).once(),
+                            ))
                             .unwrap(),
                         Key::Esc => self
                             .store
-                            .do_send(store::PushCmdStr("<Esc>".to_string()))
+                            .do_send(store::DispatchAction(
+                                ActionKind::PushCmdStr("<Esc>".to_string()).once(),
+                            ))
                             .unwrap(),
                         _ => {}
                     };
@@ -78,18 +92,26 @@ impl Handler<Run> for Editor {
                                 break;
                             }
                         }
-                        Key::Char(c) => self.store.do_send(store::PushCmd(c)).unwrap(),
-                        Key::Backspace => {
-                            self.store.do_send(store::PopCmd).unwrap();
-                        }
-                        Key::Esc | Key::Ctrl('c') => {
-                            self.store.do_send(store::IntoNormalMode).unwrap();
-                        }
+                        Key::Char(c) => self
+                            .store
+                            .do_send(store::DispatchAction(ActionKind::PushCmd(c).once()))
+                            .unwrap(),
+                        Key::Backspace => self
+                            .store
+                            .do_send(store::DispatchAction(ActionKind::PopCmd.once()))
+                            .unwrap(),
+                        Key::Esc | Key::Ctrl('c') => self
+                            .store
+                            .do_send(store::DispatchAction(ActionKind::IntoNormalMode.once()))
+                            .unwrap(),
                         _ => {}
                     };
                 }
             }
-            self.store.send(store::Notify).await.unwrap();
+            self.store
+                .send(store::DispatchAction(ActionKind::Notify.once()))
+                .await
+                .unwrap();
         }
     }
 }
@@ -99,113 +121,17 @@ impl Editor {
         Editor { store }
     }
 
-    async fn handle_selection(&self, s: Selection) -> (usize, usize) {
-        let state = self.store.send(store::GetState).await.unwrap();
-
-        let cursor_offset = state.get_cursor_offset();
-
-        use selection::SelectionKind::*;
-        match s.kind {
-            Left => {
-                unimplemented!();
-                // self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
-            }
-            Down => {
-                unimplemented!();
-                // self.store.do_send(store::CursorDown(cmd.count)).unwrap();
-            }
-            Up => {
-                unimplemented!();
-                // self.store.do_send(store::CursorUp(cmd.count)).unwrap();
-            }
-            Right => {
-                unimplemented!();
-                // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
-            }
-            ForwardWord => {
-                let count = state.count_word_forward();
-                (cursor_offset, cursor_offset + count)
-            }
-            BackWord => {
-                let count = state.count_word_back();
-                (cursor_offset - count, cursor_offset)
-            }
-            Word => {
-                let forward_count = state.count_word_forward();
-                let back_count = state.count_word_back();
-                (cursor_offset - back_count, cursor_offset + forward_count)
-            }
-            Line => {
-                unimplemented!();
-                // self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
-            }
-        }
-    }
-
     async fn handle_normal_mode(&self) {
         let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmd::parse(state.mode.get_cmd());
         if parsed.is_err() {
             return;
         }
-        let (_, cmd) = parsed.unwrap();
+        let (_, action) = parsed.unwrap();
 
-        use cmd::CmdKind::*;
-        match cmd.kind {
-            IntoInsertMode => {
-                self.store.do_send(store::IntoInsertMode).unwrap();
-            }
-            IntoAppendMode => {
-                self.store.do_send(store::CursorRight(1)).unwrap();
-                self.store.do_send(store::IntoInsertMode).unwrap();
-            }
-            IntoCmdLineMode => {
-                self.store.do_send(store::IntoCmdLineMode).unwrap();
-            }
-            RemoveChar => {
-                self.store.do_send(store::RemoveChars(cmd.count)).unwrap();
-            }
-            AppendYank => {
-                self.store.do_send(store::AppendYank(cmd.count)).unwrap();
-            }
-            InsertYank => {
-                self.store.do_send(store::InsertYank(cmd.count)).unwrap();
-            }
-            Escape => {}
-            CursorLeft => {
-                self.store.do_send(store::CursorLeft(cmd.count)).unwrap();
-            }
-            CursorDown => {
-                self.store.do_send(store::CursorDown(cmd.count)).unwrap();
-            }
-            CursorUp => {
-                self.store.do_send(store::CursorUp(cmd.count)).unwrap();
-            }
-            CursorRight => {
-                self.store.do_send(store::CursorRight(cmd.count)).unwrap();
-            }
-            ForwardWord => {
-                self.store.do_send(store::ForwardWord(cmd.count)).unwrap();
-            }
-            BackWord => {
-                self.store.do_send(store::BackWord(cmd.count)).unwrap();
-            }
-            Remove(s) => {
-                let range = self.handle_selection(s).await;
-                self.store.do_send(store::Remove(range.0, range.1)).unwrap();
-                self.store.do_send(store::MoveTo(range.0)).unwrap();
-            }
-            Yank(s) => {
-                let range = self.handle_selection(s).await;
-                self.store.do_send(store::Yank(range.0, range.1)).unwrap();
-            }
-        }
+        self.store.do_send(store::DispatchAction(action)).unwrap();
         self.store
-            .do_send(store::HandleState(move |state: &mut State| {
-                if let Mode::Normal(ref mut cmd) = state.mode {
-                    cmd.clear();
-                }
-            }))
+            .do_send(store::DispatchAction(ActionKind::ClearCmd.once()))
             .unwrap();
     }
 
@@ -213,7 +139,9 @@ impl Editor {
         let state = self.store.send(store::GetState).await.unwrap();
         let parsed = cmdline::parse(state.mode.get_cmdline());
         if parsed.is_err() {
-            self.store.do_send(store::IntoNormalMode).unwrap();
+            self.store
+                .do_send(store::DispatchAction(ActionKind::IntoNormalMode.once()))
+                .unwrap();
             return Signal::Nope;
         }
         let (_, cmd) = parsed.unwrap();
@@ -227,7 +155,9 @@ impl Editor {
             }
             Quit => return Signal::Quit,
         }
-        self.store.do_send(store::IntoNormalMode).unwrap();
+        self.store
+            .do_send(store::DispatchAction(ActionKind::IntoNormalMode.once()))
+            .unwrap();
         Signal::Nope
     }
 
@@ -236,31 +166,18 @@ impl Editor {
             Key::Char(c) => {
                 if c == '\n' {
                     self.store
-                        .do_send(store::HandleState(|state: &mut State| {
-                            state.buffer.insert_char(
-                                state.cursor.col,
-                                state.cursor.row + state.row_offset,
-                                '\n',
-                            );
-                        }))
+                        .do_send(store::DispatchAction(ActionKind::LineBreak.once()))
                         .unwrap();
-                    self.store.do_send(store::CursorDown(1)).unwrap();
-                    self.store.do_send(store::CursorLineHead).unwrap();
                     return;
                 }
                 self.store
-                    .do_send(store::HandleState(move |state: &mut State| {
-                        state.buffer.insert_char(
-                            state.cursor.col,
-                            state.cursor.row + state.row_offset,
-                            c,
-                        );
-                    }))
+                    .do_send(store::DispatchAction(ActionKind::InsertChar(c).once()))
                     .unwrap();
-                self.store.do_send(store::CursorRight(1)).unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
-                self.store.do_send(store::IntoNormalMode).unwrap();
+                self.store
+                    .do_send(store::DispatchAction(ActionKind::IntoNormalMode.once()))
+                    .unwrap();
             }
             _ => {}
         }

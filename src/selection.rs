@@ -1,23 +1,8 @@
+use crate::action::{Selection, SelectionKind};
 use nom::{
     branch::alt, bytes::complete::tag, character::complete::digit0, combinator::map,
     sequence::pair, IResult,
 };
-
-pub(crate) struct Selection {
-    pub(crate) count: usize,
-    pub(crate) kind: SelectionKind,
-}
-
-pub(crate) enum SelectionKind {
-    Left,
-    Down,
-    Up,
-    Right,
-    ForwardWord,
-    BackWord,
-    Word,
-    Line,
-}
 
 fn selection_kind(input: &str) -> IResult<&str, SelectionKind> {
     use SelectionKind::*;
