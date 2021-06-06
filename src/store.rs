@@ -34,7 +34,7 @@ impl Store {
     fn coerce_cursor(&mut self) {
         let row = min(
             self.state.cursor.row,
-            self.state.buffer.count_lines().saturating_sub(1),
+            self.state.buffer.count_lines()
         );
         self.state.cursor.row = row;
 
