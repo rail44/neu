@@ -4,7 +4,6 @@ use std::sync::Mutex;
 
 use clap::{crate_authors, crate_version, Clap};
 use dirs::home_dir;
-use tracing::error;
 use xtra::prelude::*;
 use xtra::spawn::Smol;
 
@@ -42,11 +41,17 @@ fn main() {
         config::parse(home_dir().unwrap().join(".config/neu/config.toml")).unwrap_or_default();
 
     if config.debug {
-        let log_file = fs::File::create(temp_dir().join("neu.log")).unwrap();
+        let mut i = 1;
+        let temp_path = temp_dir();
+        let mut path = temp_path.join(format!("neu.{}.log", i));
+        while path.exists() {
+            i += 1;
+            path = temp_path.join(format!("neu.{}.log", i));
+        }
+        let log_file = fs::File::create(path).unwrap();
         let writer = Mutex::new(log_file);
         tracing_subscriber::fmt().with_writer(writer).init();
     }
-    error!("test");
 
     smol::block_on(async {
         let opts: Opts = Opts::parse();
