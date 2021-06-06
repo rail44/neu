@@ -11,7 +11,7 @@ impl Renderer {
     pub(crate) fn new() -> Self {
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
-        write!(stdout, "{}", termion::clear::All).unwrap();
+        stdout.flush().unwrap();
         Self { stdout }
     }
 }
@@ -29,8 +29,13 @@ impl Handler<Render> for Renderer {
     async fn handle(&mut self, msg: Render, _ctx: &mut Context<Self>) {
         let state = msg.0;
 
-        write!(self.stdout, "{}", termion::cursor::Goto(1, 1)).unwrap();
-        write!(self.stdout, "{}", termion::clear::All).unwrap();
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::cursor::Goto(1, 1),
+            termion::clear::All
+        )
+        .unwrap();
         let mut wraps = 0;
         let mut drawed_lines_count = 0;
         let textarea_row = state.size.1 - 2;
@@ -111,7 +116,13 @@ impl Message for Finish {
 #[async_trait::async_trait]
 impl Handler<Finish> for Renderer {
     async fn handle(&mut self, _msg: Finish, _ctx: &mut Context<Self>) {
-        write!(self.stdout, "{}", termion::screen::ToMainScreen).unwrap();
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::clear::All,
+            termion::screen::ToMainScreen
+        )
+        .unwrap();
         self.stdout.flush().unwrap();
     }
 }

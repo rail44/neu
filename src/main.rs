@@ -28,11 +28,13 @@ struct Opts {
     filename: Option<String>,
 }
 
-struct HasDrop(Address<Renderer>);
+struct TearDown(Address<Renderer>);
 
-impl Drop for HasDrop {
+impl Drop for TearDown {
     fn drop(&mut self) {
         self.0.do_send(renderer::Finish).unwrap();
+
+        println!("hoge fuga piyo");
     }
 }
 
@@ -57,8 +59,8 @@ fn main() {
         let opts: Opts = Opts::parse();
         let renderer = Renderer::new().create(None).spawn(&mut Smol::Global);
 
-        let _ = HasDrop(renderer.clone());
-        let mut store = Store::new(renderer).await;
+        let mut store = Store::new(renderer.clone()).await;
+        let _teardown = TearDown(renderer.clone());
 
         if let Some(filename) = opts.filename {
             let s = fs::read_to_string(filename).unwrap();
