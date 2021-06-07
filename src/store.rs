@@ -32,10 +32,7 @@ impl Actor for Store {}
 
 impl Store {
     fn coerce_cursor(&mut self) {
-        let row = min(
-            self.state.cursor.row,
-            self.state.buffer.count_lines()
-        );
+        let row = min(self.state.cursor.row, self.state.buffer.count_lines());
         self.state.cursor.row = row;
 
         let textarea_row = (self.state.size.1 - 3) as usize;

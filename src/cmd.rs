@@ -8,13 +8,18 @@ use nom::{
     IResult,
 };
 
-use crate::action::{Action, ActionKind};
+use crate::action::{Action, ActionKind, SelectionKind};
 use crate::selection;
 
 fn remove(input: &str) -> IResult<&str, ActionKind> {
-    map(pair(tag("d"), selection::parse), |(_, s)| {
-        ActionKind::Remove(s)
-    })(input)
+    alt((
+        map(tag("dd"), |_| {
+            ActionKind::Remove(SelectionKind::Line.once())
+        }),
+        map(pair(tag("d"), selection::parse), |(_, s)| {
+            ActionKind::Remove(s)
+        }),
+    ))(input)
 }
 
 fn yank(input: &str) -> IResult<&str, ActionKind> {

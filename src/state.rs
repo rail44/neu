@@ -74,6 +74,10 @@ impl State {
             .count_forward_word(self.cursor.col, self.cursor.row + self.row_offset)
     }
 
+    pub(crate) fn current_line(&self) -> (usize, usize) {
+        self.buffer.current_line(self.cursor.row + self.row_offset)
+    }
+
     pub(crate) fn measure_selection(&self, s: Selection) -> (usize, usize) {
         let cursor_offset = self.get_cursor_offset();
 
@@ -108,10 +112,7 @@ impl State {
                 let back_count = self.count_word_back();
                 (cursor_offset - back_count, cursor_offset + forward_count)
             }
-            Line => {
-                unimplemented!();
-                // self.store.do_send(store::RemoveLines(cmd.count)).unwrap();
-            }
+            Line => self.current_line(),
         }
     }
 }

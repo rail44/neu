@@ -16,6 +16,22 @@ pub(crate) enum SelectionKind {
     Line,
 }
 
+impl SelectionKind {
+    pub(crate) fn once(self) -> Selection {
+        Selection {
+            count: 1,
+            kind: self,
+        }
+    }
+
+    pub(crate) fn nth(self, n: usize) -> Selection {
+        Selection {
+            count: n,
+            kind: self,
+        }
+    }
+}
+
 pub(crate) struct Action {
     pub(crate) count: usize,
     pub(crate) kind: ActionKind,

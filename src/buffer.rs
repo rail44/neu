@@ -139,6 +139,12 @@ impl Buffer {
         i
     }
 
+    pub(crate) fn current_line(&self, row: usize) -> (usize, usize) {
+        let start = self.0.offset_of_line(row);
+        let end = self.0.offset_of_line(row + 1);
+        (start, end)
+    }
+
     pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Buffer {
         let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
