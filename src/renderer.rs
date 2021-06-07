@@ -36,36 +36,18 @@ impl Handler<Render> for Renderer {
             termion::clear::All
         )
         .unwrap();
-        let mut wraps = 0;
-        let mut drawed_lines_count = 0;
         let textarea_row = state.size.1 - 2;
         let max_line_digit = format!("{}", state.buffer.lines().count()).chars().count();
-        for (i, line) in state.buffer.lines().skip(state.row_offset).enumerate() {
-            let wrap = (line.len() as u16) / state.size.0;
-            drawed_lines_count += 1;
-
-            let line = if drawed_lines_count >= textarea_row && i != state.cursor.row {
-                let s: String = line.chars().take(state.size.0 as usize).collect();
-                s.into()
-            } else {
-                line
-            };
+        let textarea_col = state.size.0 - max_line_digit as u16 - 1;
+        for (i, line) in state.buffer.lines().skip(state.row_offset).take(textarea_row as usize).enumerate() {
             write!(
                 self.stdout,
                 "{:max_line_digit$} {}\r\n",
                 state.row_offset + i + 1,
-                line,
+                line.chars().take(textarea_col as usize).collect::<String>(),
                 max_line_digit = max_line_digit
             )
             .unwrap();
-
-            if i < state.cursor.row {
-                wraps += wrap
-            }
-            drawed_lines_count += wrap;
-            if drawed_lines_count >= textarea_row {
-                break;
-            }
         }
         write!(
             self.stdout,
@@ -95,12 +77,12 @@ impl Handler<Render> for Renderer {
                 .unwrap();
             }
         };
-        let col = state.cursor.col % (state.size.0 as usize);
-        let row = state.cursor.row as u16 + state.cursor.col as u16 / state.size.0 + wraps;
+        let col = state.cursor.col;
+        let row = state.cursor.row;
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto((max_line_digit + col + 2) as u16, row + 1)
+            termion::cursor::Goto((max_line_digit + col + 2) as u16, row as u16 + 1)
         )
         .unwrap();
         self.stdout.flush().unwrap();
