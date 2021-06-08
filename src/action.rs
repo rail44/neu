@@ -1,10 +1,12 @@
 use crate::buffer::Buffer;
 
+#[derive(Clone, Debug)]
 pub(crate) struct Selection {
     pub(crate) count: usize,
     pub(crate) kind: SelectionKind,
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum SelectionKind {
     Left,
     Down,
@@ -32,11 +34,13 @@ impl SelectionKind {
     }
 }
 
+#[derive(Clone, Debug)]
 pub(crate) struct Action {
     pub(crate) count: usize,
     pub(crate) kind: ActionKind,
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum MovementKind {
     CursorLeft,
     CursorDown,
@@ -70,6 +74,7 @@ impl From<MovementKind> for ActionKind {
     }
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum EditKind {
     LineBreak,
     InsertChar(char),
@@ -101,6 +106,7 @@ impl From<EditKind> for ActionKind {
     }
 }
 
+#[derive(Clone, Debug)]
 pub(crate) enum ActionKind {
     Movement(MovementKind),
     Edit(EditKind),
@@ -115,6 +121,7 @@ pub(crate) enum ActionKind {
     Notify,
     Yank(Selection),
     ClearCmd,
+    Repeat,
 }
 
 impl ActionKind {

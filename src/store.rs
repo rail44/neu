@@ -107,20 +107,21 @@ impl Store {
                     self.state.cursor.col,
                     self.state.cursor.row + self.state.row_offset,
                 );
-                self.action(MovementKind::CursorRight.nth(word_offset * count))
+                self.movement(MovementKind::CursorRight, word_offset * count);
             }
             BackWord => {
                 let word_offset = self.state.buffer.count_back_word(
                     self.state.cursor.col,
                     self.state.cursor.row + self.state.row_offset,
                 );
-                self.action(MovementKind::CursorLeft.nth(word_offset * count));
+                self.movement(MovementKind::CursorLeft, word_offset * count);
             }
         }
     }
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
+        self.state.prev_edit = Some((edit.clone(), count));
         match edit {
             RemoveChar => {
                 let yank = self.state.buffer.remove_chars(
@@ -134,14 +135,14 @@ impl Store {
                 let (from, to) = self.state.measure_selection(selection);
                 let yank = self.state.buffer.remove(from..to);
                 self.action(ActionKind::SetYank(yank).once());
-                self.action(MovementKind::MoveTo(from).once());
+                self.movement(MovementKind::MoveTo(from), 1);
             }
             AppendYank => {
                 let col = if self.state.yanked.end_with_line_break() {
-                    self.action(MovementKind::CursorDown.once());
+                    self.movement(MovementKind::CursorDown, 1);
                     0
                 } else {
-                    self.action(MovementKind::CursorRight.once());
+                    self.movement(MovementKind::CursorRight, 1);
                     self.state.cursor.col
                 };
                 for _ in 0..count {
@@ -172,8 +173,8 @@ impl Store {
                     self.state.cursor.row + self.state.row_offset,
                     '\n',
                 );
-                self.action(MovementKind::CursorDown.once());
-                self.action(MovementKind::CursorLineHead.once());
+                self.movement(MovementKind::CursorDown, 1);
+                self.movement(MovementKind::CursorLineHead, 1);
             }
             InsertChar(c) => {
                 self.state.buffer.insert_char(
@@ -181,7 +182,7 @@ impl Store {
                     self.state.cursor.row + self.state.row_offset,
                     c,
                 );
-                self.action(MovementKind::CursorRight.once());
+                self.movement(MovementKind::CursorRight, 1);
             }
         }
     }
@@ -198,7 +199,7 @@ impl Store {
                 self.state.mode = Mode::Insert;
             }
             IntoAppendMode => {
-                self.action(MovementKind::CursorRight.once());
+                self.movement(MovementKind::CursorRight, 1);
                 self.action(IntoInsertMode.once());
             }
             IntoCmdLineMode => {
@@ -250,6 +251,11 @@ impl Store {
                 let (from, to) = self.state.measure_selection(selection);
                 let yank = self.state.buffer.subseq(from..to);
                 self.action(SetYank(yank).once());
+            }
+            Repeat => {
+                if let Some((edit, count)) = self.state.prev_edit.clone() {
+                    self.edit(edit, count);
+                }
             }
         }
     }

@@ -39,6 +39,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
         map(tag(":"), |_| ActionKind::IntoCmdLineMode),
         map(tag("p"), |_| EditKind::AppendYank.into()),
         map(tag("P"), |_| EditKind::InsertYank.into()),
+        map(tag("."), |_| ActionKind::Repeat),
         map(alt((tag("h"), tag("<Left>"))), |_| {
             MovementKind::CursorLeft.into()
         }),

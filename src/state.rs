@@ -1,4 +1,4 @@
-use crate::action::{Selection, SelectionKind};
+use crate::action::{EditKind, Selection, SelectionKind};
 use crate::buffer::Buffer;
 
 use termion::terminal_size;
@@ -47,6 +47,7 @@ pub(crate) struct State {
     pub(crate) yanked: Buffer,
     pub(crate) size: (u16, u16),
     pub(crate) buffer: Buffer,
+    pub(crate) prev_edit: Option<(EditKind, usize)>,
 }
 
 impl State {
