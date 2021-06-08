@@ -39,7 +39,13 @@ impl Handler<Render> for Renderer {
         let textarea_row = state.size.1 - 2;
         let max_line_digit = format!("{}", state.buffer.lines().count()).chars().count();
         let textarea_col = state.size.0 - max_line_digit as u16 - 1;
-        for (i, line) in state.buffer.lines().skip(state.row_offset).take(textarea_row as usize).enumerate() {
+        for (i, line) in state
+            .buffer
+            .lines()
+            .skip(state.row_offset)
+            .take(textarea_row as usize)
+            .enumerate()
+        {
             write!(
                 self.stdout,
                 "{:max_line_digit$} {}\r\n",

@@ -37,33 +37,83 @@ pub(crate) struct Action {
     pub(crate) kind: ActionKind,
 }
 
-pub(crate) enum ActionKind {
+pub(crate) enum MovementKind {
     CursorLeft,
     CursorDown,
     CursorUp,
     CursorRight,
     CursorLineHead,
+    ForwardWord,
+    BackWord,
+    MoveTo(usize),
+}
+
+impl MovementKind {
+    pub(crate) fn once(self) -> Action {
+        Action {
+            count: 1,
+            kind: self.into(),
+        }
+    }
+
+    pub(crate) fn nth(self, n: usize) -> Action {
+        Action {
+            count: n,
+            kind: self.into(),
+        }
+    }
+}
+
+impl From<MovementKind> for ActionKind {
+    fn from(m: MovementKind) -> Self {
+        Self::Movement(m)
+    }
+}
+
+pub(crate) enum EditKind {
+    LineBreak,
+    InsertChar(char),
+    RemoveChar,
+    Remove(Selection),
+    AppendYank,
+    InsertYank,
+}
+
+impl EditKind {
+    pub(crate) fn once(self) -> Action {
+        Action {
+            count: 1,
+            kind: self.into(),
+        }
+    }
+
+    pub(crate) fn nth(self, n: usize) -> Action {
+        Action {
+            count: n,
+            kind: self.into(),
+        }
+    }
+}
+
+impl From<EditKind> for ActionKind {
+    fn from(e: EditKind) -> Self {
+        Self::Edit(e)
+    }
+}
+
+pub(crate) enum ActionKind {
+    Movement(MovementKind),
+    Edit(EditKind),
     IntoAppendMode,
     IntoInsertMode,
     IntoNormalMode,
     IntoCmdLineMode,
     SetYank(Buffer),
-    LineBreak,
-    InsertChar(char),
     PushCmd(char),
     PushCmdStr(String),
     PopCmd,
     Notify,
-    ForwardWord,
-    BackWord,
-    RemoveChar,
-    RemoveLine(usize),
-    YankLine(usize),
-    Remove(Selection),
     Yank(Selection),
-    AppendYank,
-    InsertYank,
-    MoveTo(usize),
     ClearCmd,
 }
 

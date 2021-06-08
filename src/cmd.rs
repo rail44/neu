@@ -8,46 +8,56 @@ use nom::{
     IResult,
 };
 
-use crate::action::{Action, ActionKind, SelectionKind};
+use crate::action::{Action, ActionKind, EditKind, MovementKind, SelectionKind};
 use crate::selection;
 
 fn remove(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("dd"), |_| {
-            ActionKind::Remove(SelectionKind::Line.once())
+            EditKind::Remove(SelectionKind::Line.once()).into()
         }),
         map(pair(tag("d"), selection::parse), |(_, s)| {
-            ActionKind::Remove(s)
+            EditKind::Remove(s).into()
         }),
     ))(input)
 }
 
 fn yank(input: &str) -> IResult<&str, ActionKind> {
-    map(pair(tag("y"), selection::parse), |(_, s)| {
-        ActionKind::Yank(s)
-    })(input)
+    alt((
+        map(tag("yy"), |_| ActionKind::Yank(SelectionKind::Line.once())),
+        map(pair(tag("y"), selection::parse), |(_, s)| {
+            ActionKind::Yank(s)
+        }),
+    ))(input)
 }
 
 fn action_kind(input: &str) -> IResult<&str, ActionKind> {
-    use ActionKind::*;
     alt((
-        map(tag("x"), |_| RemoveChar),
-        map(tag("i"), |_| IntoInsertMode),
-        map(tag("a"), |_| IntoAppendMode),
-        map(tag(":"), |_| IntoCmdLineMode),
-        map(tag("p"), |_| AppendYank),
-        map(tag("P"), |_| InsertYank),
-        map(alt((tag("h"), tag("<Left>"))), |_| CursorLeft),
-        map(alt((tag("j"), tag("<Down>"))), |_| CursorDown),
-        map(alt((tag("k"), tag("<Up>"))), |_| CursorUp),
-        map(alt((tag("l"), tag("<Right>"))), |_| CursorRight),
-        map(tag("w"), |_| ForwardWord),
-        map(tag("b"), |_| BackWord),
+        map(tag("x"), |_| EditKind::RemoveChar.into()),
+        map(tag("i"), |_| ActionKind::IntoInsertMode),
+        map(tag("a"), |_| ActionKind::IntoAppendMode),
+        map(tag(":"), |_| ActionKind::IntoCmdLineMode),
+        map(tag("p"), |_| EditKind::AppendYank.into()),
+        map(tag("P"), |_| EditKind::InsertYank.into()),
+        map(alt((tag("h"), tag("<Left>"))), |_| {
+            MovementKind::CursorLeft.into()
+        }),
+        map(alt((tag("j"), tag("<Down>"))), |_| {
+            MovementKind::CursorDown.into()
+        }),
+        map(alt((tag("k"), tag("<Up>"))), |_| {
+            MovementKind::CursorUp.into()
+        }),
+        map(alt((tag("l"), tag("<Right>"))), |_| {
+            MovementKind::CursorRight.into()
+        }),
+        map(tag("w"), |_| MovementKind::ForwardWord.into()),
+        map(tag("b"), |_| MovementKind::BackWord.into()),
         remove,
         yank,
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),
-            |_| ClearCmd,
+            |_| ActionKind::ClearCmd,
         ),
     ))(input)
 }

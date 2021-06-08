@@ -6,7 +6,7 @@ use termion::input::TermRead;
 
 use xtra::prelude::*;
 
-use crate::action::ActionKind;
+use crate::action::{ActionKind, EditKind};
 use crate::cmd;
 use crate::cmdline;
 use crate::state::Mode;
@@ -166,12 +166,12 @@ impl Editor {
             Key::Char(c) => {
                 if c == '\n' {
                     self.store
-                        .do_send(store::DispatchAction(ActionKind::LineBreak.once()))
+                        .do_send(store::DispatchAction(EditKind::LineBreak.once()))
                         .unwrap();
                     return;
                 }
                 self.store
-                    .do_send(store::DispatchAction(ActionKind::InsertChar(c).once()))
+                    .do_send(store::DispatchAction(EditKind::InsertChar(c).once()))
                     .unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
