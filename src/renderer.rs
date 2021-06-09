@@ -1,7 +1,7 @@
-use crate::state::{Mode, State};
+use crate::mode::Mode;
+use crate::state::State;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
-use xtra::prelude::*;
 
 pub(crate) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
@@ -16,18 +16,9 @@ impl Renderer {
     }
 }
 
-impl Actor for Renderer {}
-
-pub(crate) struct Render(pub(crate) State);
-
-impl Message for Render {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<Render> for Renderer {
-    async fn handle(&mut self, msg: Render, _ctx: &mut Context<Self>) {
-        let state = msg.0;
+impl Renderer {
+    pub(crate) fn render(&mut self, state: &State) {
+        tracing::error!("{:?}", state);
 
         write!(
             self.stdout,
@@ -95,15 +86,8 @@ impl Handler<Render> for Renderer {
     }
 }
 
-pub(crate) struct Finish;
-
-impl Message for Finish {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<Finish> for Renderer {
-    async fn handle(&mut self, _msg: Finish, _ctx: &mut Context<Self>) {
+impl Drop for Renderer {
+    fn drop(&mut self) {
         write!(
             self.stdout,
             "{}{}",

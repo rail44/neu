@@ -1,4 +1,6 @@
 use crate::buffer::Buffer;
+use crate::state::State;
+use flume::Sender;
 
 #[derive(Clone, Debug)]
 pub(crate) struct Selection {
@@ -118,10 +120,12 @@ pub(crate) enum ActionKind {
     PushCmd(char),
     PushCmdStr(String),
     PopCmd,
-    Notify,
     Yank(Selection),
     ClearCmd,
     Repeat,
+    WriteOut(String),
+    Quit,
+    GetState(Sender<State>),
 }
 
 impl ActionKind {

@@ -1,34 +1,46 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::buffer::Buffer;
-use crate::renderer;
+use crate::mode::Mode;
 use crate::renderer::Renderer;
-use crate::state::{Mode, State};
+use crate::state::State;
 
 use core::cmp::min;
-use xtra::prelude::*;
+use flume::Receiver;
+use std::fs::File;
+use std::io::{BufWriter, Write};
 
 pub(crate) struct Store {
     state: State,
-    renderer: Address<Renderer>,
+    renderer: Renderer,
+    rx: Receiver<Action>,
 }
 
 impl Store {
-    pub(crate) async fn new(renderer: Address<Renderer>) -> Self {
-        let mut actor = Self {
+    pub(crate) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
+        let mut store = Self {
+            rx,
             renderer,
             state: State::new(),
         };
-        actor.notify();
-        actor
+        store.notify();
+        store
     }
 
-    pub(crate) async fn set_buffer(&mut self, buffer: Buffer) {
+    pub(crate) fn set_buffer(&mut self, buffer: Buffer) {
         self.state.buffer = buffer;
         self.notify();
     }
-}
 
-impl Actor for Store {}
+    pub(crate) async fn run(&mut self) {
+        loop {
+            let action = smol::block_on(async { self.rx.recv_async().await.unwrap() });
+            if !self.action(action) {
+                break;
+            }
+            self.notify();
+        }
+    }
+}
 
 impl Store {
     fn coerce_cursor(&mut self) {
@@ -70,9 +82,7 @@ impl Store {
 
     fn notify(&mut self) {
         self.coerce_cursor();
-        self.renderer
-            .do_send(renderer::Render(self.state.clone()))
-            .unwrap()
+        self.renderer.render(&self.state);
     }
 
     fn movement(&mut self, movement: MovementKind, count: usize) {
@@ -187,7 +197,7 @@ impl Store {
         }
     }
 
-    fn action(&mut self, action: Action) {
+    fn action(&mut self, action: Action) -> bool {
         use ActionKind::*;
         match action.kind {
             Movement(m) => self.movement(m, action.count),
@@ -244,9 +254,6 @@ impl Store {
                     cmd.pop();
                 }
             },
-            Notify => {
-                self.notify();
-            }
             Yank(selection) => {
                 let (from, to) = self.state.measure_selection(selection);
                 let yank = self.state.buffer.subseq(from..to);
@@ -257,30 +264,18 @@ impl Store {
                     self.edit(edit, count);
                 }
             }
-        }
-    }
-}
-
-pub(crate) struct DispatchAction(pub(crate) Action);
-impl Message for DispatchAction {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<DispatchAction> for Store {
-    async fn handle(&mut self, msg: DispatchAction, _ctx: &mut Context<Self>) {
-        self.action(msg.0);
-    }
-}
-
-pub(crate) struct GetState;
-impl Message for GetState {
-    type Result = State;
-}
-
-#[async_trait::async_trait]
-impl Handler<GetState> for Store {
-    async fn handle(&mut self, _msg: GetState, _ctx: &mut Context<Self>) -> State {
-        self.state.clone()
+            Quit => {
+                return false;
+            }
+            WriteOut(filename) => {
+                let f = File::create(filename).unwrap();
+                let mut w = BufWriter::new(f);
+                write!(w, "{}", self.state.buffer.as_str()).unwrap();
+            }
+            GetState(tx) => {
+                tx.send(self.state.clone()).unwrap();
+            }
+        };
+        true
     }
 }

@@ -1,3 +1,4 @@
+use crate::action::{Action, ActionKind};
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -8,22 +9,17 @@ use nom::{
     IResult,
 };
 
-pub(crate) enum Cmd {
-    Write(String),
-    Quit,
-}
-
-fn cmd(input: &str) -> IResult<&str, Cmd> {
-    use Cmd::*;
+fn cmdline(input: &str) -> IResult<&str, Action> {
+    use ActionKind::*;
     alt((
         map(
             separated_pair(tag("w"), space1, many0(anychar)),
-            |(_, arg)| Write(arg.iter().collect()),
+            |(_, arg)| WriteOut(arg.iter().collect()).once(),
         ),
-        map(tag("q"), |_| Quit),
+        map(tag("q"), |_| Quit.once()),
     ))(input)
 }
 
-pub(crate) fn parse(input: &str) -> IResult<&str, Cmd> {
-    cmd(input)
+pub(crate) fn parse(input: &str) -> IResult<&str, Action> {
+    cmdline(input)
 }

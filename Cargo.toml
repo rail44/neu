@@ -11,6 +11,7 @@ anyhow = "1.0.40"
 async-trait = "0.1.48"
 clap = "3.0.0-beta.2"
 dirs = "3.0.2"
+flume = "0.10.5"
 nom = "6.1.2"
 serde = "1.0.126"
 serde_derive = "1.0.126"
@@ -20,4 +21,3 @@ toml = "0.5.8"
 tracing = { git = "https://github.com/tokio-rs/tracing", features = ["release_max_level_warn"] }
 tracing-subscriber = { git = "https://github.com/tokio-rs/tracing" }
 xi-rope = "0.3.0"
-xtra = { version = "0.5.1", features = ["with-smol-1"] }

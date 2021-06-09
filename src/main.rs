@@ -4,8 +4,6 @@ use std::sync::Mutex;
 
 use clap::{crate_authors, crate_version, Clap};
 use dirs::home_dir;
-use xtra::prelude::*;
-use xtra::spawn::Smol;
 
 mod action;
 mod buffer;
@@ -13,6 +11,7 @@ mod cmd;
 mod cmdline;
 mod config;
 mod editor;
+mod mode;
 mod renderer;
 mod selection;
 mod state;
@@ -27,14 +26,6 @@ use crate::store::Store;
 #[clap(version = crate_version!(), author = crate_authors!())]
 struct Opts {
     filename: Option<String>,
-}
-
-struct TearDown(Address<Renderer>);
-
-impl Drop for TearDown {
-    fn drop(&mut self) {
-        self.0.do_send(renderer::Finish).unwrap();
-    }
 }
 
 fn main() {
@@ -56,21 +47,20 @@ fn main() {
 
     smol::block_on(async {
         let opts: Opts = Opts::parse();
-        let renderer = Renderer::new().create(None).spawn(&mut Smol::Global);
+        let renderer = Renderer::new();
 
-        let mut store = Store::new(renderer.clone()).await;
+        let (tx, rx) = flume::unbounded();
+        let mut store = Store::new(rx, renderer);
 
         if let Some(filename) = opts.filename {
             let s = fs::read_to_string(filename).unwrap();
             let buffer = Buffer::from(s.as_str());
 
-            store.set_buffer(buffer).await;
+            store.set_buffer(buffer);
         };
 
-        let store_addr = store.create(None).spawn(&mut Smol::Global);
-
-        let editor = Editor::new(store_addr);
-        let _teardown = TearDown(renderer.clone());
-        editor.run().await;
+        let editor = Editor::new(tx);
+        smol::spawn(async move { editor.run().await }).detach();
+        store.run().await;
     })
 }
