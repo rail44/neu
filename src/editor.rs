@@ -23,16 +23,8 @@ pub(crate) struct Editor {
     store: Address<Store>,
 }
 
-impl Actor for Editor {}
-
-pub(crate) struct Run;
-impl Message for Run {
-    type Result = ();
-}
-
-#[async_trait::async_trait]
-impl Handler<Run> for Editor {
-    async fn handle(&mut self, _msg: Run, _ctx: &mut Context<Self>) {
+impl Editor {
+    pub(crate) async fn run(&self) {
         let stdin = stdin();
         for k in stdin.keys() {
             let state = self.store.send(store::GetState).await.unwrap();

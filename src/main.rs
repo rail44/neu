@@ -70,8 +70,7 @@ fn main() {
         let store_addr = store.create(None).spawn(&mut Smol::Global);
 
         let editor = Editor::new(store_addr);
-        let addr = editor.create(None).spawn(&mut Smol::Global);
         let _teardown = TearDown(renderer.clone());
-        addr.send(editor::Run).await.unwrap();
+        editor.run().await;
     })
 }
