@@ -458,9 +458,9 @@ dependencies = [
 
 [[package]]
 name = "libc"
-version = "0.2.95"
+version = "0.2.96"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "789da6d93f1b866ffe175afc5322a4d76c038605a1c3319bb57b06967ca98a36"
+checksum = "5600b4e6efc5421841a2138a6b082e07fe12f9aaa12783d50e5d13325b26b4fc"
 
 [[package]]
 name = "lock_api"
@@ -852,9 +852,9 @@ checksum = "73473c0e59e6d5812c5dfe2a064a6444949f089e20eec9a2e5506596494e4623"
 
 [[package]]
 name = "syn"
-version = "1.0.72"
+version = "1.0.73"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "a1e8cdbefb79a9a5a65e0db8b47b723ee907b7c7f8496c76a1770b5c310bab82"
+checksum = "f71489ff30030d2ae598524f61326b902466f72a0fb1a8564c001cc63425bcc7"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -918,7 +918,7 @@ dependencies = [
 [[package]]
 name = "tracing"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "cfg-if",
  "pin-project-lite",
@@ -929,7 +929,7 @@ dependencies = [
 [[package]]
 name = "tracing-attributes"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -939,7 +939,7 @@ dependencies = [
 [[package]]
 name = "tracing-core"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "lazy_static",
 ]
@@ -947,7 +947,7 @@ dependencies = [
 [[package]]
 name = "tracing-log"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "lazy_static",
  "log",
@@ -957,7 +957,7 @@ dependencies = [
 [[package]]
 name = "tracing-serde"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "serde",
  "tracing-core",
@@ -966,7 +966,7 @@ dependencies = [
 [[package]]
 name = "tracing-subscriber"
 version = "0.3.0"
-source = "git+https://github.com/tokio-rs/tracing#d92d7394027254f5fa86b518ea52e2d173b8fb87"
+source = "git+https://github.com/tokio-rs/tracing#44d355800f8e7da2dfc601289d344b1967c702be"
 dependencies = [
  "ansi_term",
  "chrono",
