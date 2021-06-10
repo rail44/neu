@@ -18,8 +18,6 @@ impl Renderer {
 
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
-        tracing::error!("{:?}", state);
-
         write!(
             self.stdout,
             "{}{}",
@@ -28,18 +26,19 @@ impl Renderer {
         )
         .unwrap();
         let textarea_row = state.size.1 - 2;
-        let max_line_digit = format!("{}", state.buffer.lines().count()).chars().count();
-        let textarea_col = state.size.0 - max_line_digit as u16 - 1;
+        let line_count = state.buffer.count_lines();
+        let max_line_digit = format!("{}", line_count).chars().count();
+        let textarea_col = state.size.0 - max_line_digit as u16 - 2;
         for (i, line) in state
             .buffer
-            .lines()
-            .skip(state.row_offset)
+            .lines_at(state.row_offset)
             .take(textarea_row as usize)
             .enumerate()
         {
+            write!(self.stdout, "{}", termion::cursor::Goto(1, (i + 1) as u16),).unwrap();
             write!(
                 self.stdout,
-                "{:max_line_digit$} {}\r\n",
+                " {:max_line_digit$} {}",
                 state.row_offset + i + 1,
                 line.chars().take(textarea_col as usize).collect::<String>(),
                 max_line_digit = max_line_digit
@@ -49,7 +48,7 @@ impl Renderer {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto(0, state.size.1 - 1)
+            termion::cursor::Goto(1, state.size.1 - 1)
         )
         .unwrap();
         match &state.mode {
@@ -79,22 +78,22 @@ impl Renderer {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto((max_line_digit + col + 2) as u16, row as u16 + 1)
+            termion::cursor::Goto((max_line_digit + col + 3) as u16, row as u16 + 1)
         )
         .unwrap();
         self.stdout.flush().unwrap();
     }
 }
 
-impl Drop for Renderer {
-    fn drop(&mut self) {
-        write!(
-            self.stdout,
-            "{}{}",
-            termion::clear::All,
-            termion::screen::ToMainScreen
-        )
-        .unwrap();
-        self.stdout.flush().unwrap();
-    }
-}
+// impl Drop for Renderer {
+//     fn drop(&mut self) {
+//         write!(
+//             self.stdout,
+//             "{}{}",
+//             termion::clear::All,
+//             termion::screen::ToMainScreen
+//         )
+//         .unwrap();
+//         self.stdout.flush().unwrap();
+//     }
+// }
