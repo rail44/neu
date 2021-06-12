@@ -1,7 +1,9 @@
 use crate::mode::Mode;
 use crate::state::State;
+use core::cmp::{max, min};
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
+use unicode_width::UnicodeWidthStr;
 
 pub(crate) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
@@ -38,7 +40,7 @@ impl Renderer {
             write!(self.stdout, "{}", termion::cursor::Goto(1, (i + 1) as u16),).unwrap();
             write!(
                 self.stdout,
-                " {:max_line_digit$} {}",
+                " {:max_line_digit$} {:>1}",
                 state.row_offset + i + 1,
                 line.chars().take(textarea_col as usize).collect::<String>(),
                 max_line_digit = max_line_digit
@@ -75,10 +77,18 @@ impl Renderer {
         };
         let col = state.cursor.col;
         let row = state.cursor.row;
+
+        let line = state.buffer.line(row);
+        let width = line
+            .slice(..min(col + 1, line.len_chars()))
+            .as_str()
+            .map(|s| UnicodeWidthStr::width(s))
+            .unwrap_or(0);
+
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto((max_line_digit + col + 3) as u16, row as u16 + 1)
+            termion::cursor::Goto((max_line_digit + 2 + max(1, width)) as u16, row as u16 + 1)
         )
         .unwrap();
         self.stdout.flush().unwrap();

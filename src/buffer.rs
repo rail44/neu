@@ -44,6 +44,10 @@ impl Buffer {
         (end - start).saturating_sub(1)
     }
 
+    pub(crate) fn line(&self, i: usize) -> RopeSlice {
+        self.0.line(i)
+    }
+
     pub(crate) fn lines_at(&self, i: usize) -> impl Iterator<Item = RopeSlice> {
         self.0.lines_at(i)
     }
@@ -53,7 +57,7 @@ impl Buffer {
     }
 
     pub(crate) fn count_chars(&self) -> usize {
-        self.0.len_utf16_cu()
+        self.0.len_chars()
     }
 
     pub(crate) fn insert(&mut self, col: usize, row: usize, buffer: Buffer) {
@@ -103,7 +107,7 @@ impl Buffer {
         let mut chars = self.0.chars_at(start);
 
         let mut i = 0;
-        while let Some(c) = chars.next() {
+        while let Some(c) = chars.prev() {
             i += 1;
             if !c.is_ascii_whitespace() {
                 break;

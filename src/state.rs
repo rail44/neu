@@ -31,6 +31,16 @@ impl State {
         }
     }
 
+    pub(crate) fn with_buffer(buffer: Buffer) -> Self {
+        let size = terminal_size().unwrap();
+
+        Self {
+            size,
+            buffer,
+            ..Default::default()
+        }
+    }
+
     pub(crate) fn get_cursor_offset(&self) -> usize {
         self.buffer
             .get_offset_by_cursor(self.cursor.col, self.cursor.row + self.row_offset)

@@ -21,3 +21,4 @@ termion = "1.5.6"
 toml = "0.5.8"
 tracing = { git = "https://github.com/tokio-rs/tracing", features = ["release_max_level_warn"] }
 tracing-subscriber = { git = "https://github.com/tokio-rs/tracing" }
+unicode-width = "0.1.8"

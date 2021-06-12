@@ -1,5 +1,6 @@
 use std::env::temp_dir;
 use std::fs;
+use std::panic;
 use std::sync::Mutex;
 
 use clap::{crate_authors, crate_version, Clap};
@@ -42,21 +43,29 @@ fn main() {
         }
         let log_file = fs::File::create(path).unwrap();
         let writer = Mutex::new(log_file);
-        tracing_subscriber::fmt().with_writer(writer).init();
+        tracing_subscriber::fmt()
+            .with_writer(writer)
+            .with_max_level(tracing::Level::DEBUG)
+            .init();
     }
+
+    panic::set_hook(Box::new(|e| {
+        tracing::error!("{}", e);
+    }));
 
     smol::block_on(async {
         let opts: Opts = Opts::parse();
         let renderer = Renderer::new();
 
         let (tx, rx) = flume::unbounded();
-        let mut store = Store::new(rx, renderer);
 
-        if let Some(filename) = opts.filename {
+        let mut store = if let Some(filename) = opts.filename {
             let s = fs::read_to_string(filename).unwrap();
             let buffer = Buffer::from(s.as_str());
 
-            store.set_buffer(buffer);
+            Store::with_buffer(rx, renderer, buffer)
+        } else {
+            Store::new(rx, renderer)
         };
 
         let editor = Editor::new(tx);

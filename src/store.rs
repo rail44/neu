@@ -26,9 +26,14 @@ impl Store {
         store
     }
 
-    pub(crate) fn set_buffer(&mut self, buffer: Buffer) {
-        self.state.buffer = buffer;
-        self.notify();
+    pub(crate) fn with_buffer(rx: Receiver<Action>, renderer: Renderer, buffer: Buffer) -> Self {
+        let mut store = Self {
+            rx,
+            renderer,
+            state: State::with_buffer(buffer),
+        };
+        store.notify();
+        store
     }
 
     pub(crate) async fn run(&mut self) {
@@ -61,7 +66,10 @@ impl Store {
         }
         let col = min(
             state.cursor.col,
-            state.buffer.row_len(state.cursor.row + state.row_offset),
+            state
+                .buffer
+                .row_len(state.cursor.row + state.row_offset)
+                .saturating_sub(1),
         );
         state.cursor.col = col;
     }
