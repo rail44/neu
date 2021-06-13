@@ -1,6 +1,7 @@
 use crate::mode::Mode;
 use crate::state::State;
 use core::cmp::{max, min};
+use std::borrow::Cow;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use unicode_width::UnicodeWidthStr;
@@ -20,6 +21,7 @@ impl Renderer {
 
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
+        tracing::error!("{:?}", state);
         write!(
             self.stdout,
             "{}{}",
@@ -79,11 +81,9 @@ impl Renderer {
         let row = state.cursor.row;
 
         let line = state.buffer.line(row);
-        let width = line
-            .slice(..min(col + 1, line.len_chars()))
-            .as_str()
-            .map(|s| UnicodeWidthStr::width(s))
-            .unwrap_or(0);
+
+        let s: Cow<str> = line.slice(..min(col + 1, line.len_chars())).into();
+        let width = UnicodeWidthStr::width(&*s);
 
         write!(
             self.stdout,

@@ -34,14 +34,13 @@ fn main() {
         config::parse(home_dir().unwrap().join(".config/neu/config.toml")).unwrap_or_default();
 
     if config.debug {
-        let mut i = 1;
         let temp_path = temp_dir();
-        let mut path = temp_path.join(format!("neu.{}.log", i));
-        while path.exists() {
-            i += 1;
-            path = temp_path.join(format!("neu.{}.log", i));
-        }
-        let log_file = fs::File::create(path).unwrap();
+        let path = temp_path.join("neu.log");
+        let log_file = fs::OpenOptions::new()
+            .create(true)
+            .append(true)
+            .open(path)
+            .unwrap();
         let writer = Mutex::new(log_file);
         tracing_subscriber::fmt()
             .with_writer(writer)
