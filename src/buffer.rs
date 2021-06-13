@@ -44,27 +44,21 @@ impl Buffer {
         (end - start).saturating_sub(1)
     }
 
-    pub(crate) fn line(&self, i: usize) -> RopeSlice {
-        self.0.line(i)
+    pub(crate) fn line(&self, i: usize) -> BufferSlice {
+        self.0.line(i).into()
     }
 
-    pub(crate) fn lines_at(&self, i: usize) -> impl Iterator<Item = RopeSlice> {
-        self.0.lines_at(i)
+    pub(crate) fn lines_at(&self, i: usize) -> impl Iterator<Item = BufferSlice> {
+        self.0.lines_at(i).map(BufferSlice::from)
     }
 
     pub(crate) fn count_lines(&self) -> usize {
         self.0.len_lines()
     }
 
-    pub(crate) fn count_chars(&self) -> usize {
-        self.0.len_chars()
-    }
-
-    pub(crate) fn insert(&mut self, col: usize, row: usize, buffer: Buffer) {
-        let start = self.get_offset_by_cursor(col, row);
-        let right = self.0.split_off(start);
-        self.0.append(buffer.0);
-        self.0.append(right);
+    pub(crate) fn insert(&mut self, col: usize, row: usize, s: &str) {
+        let i = self.get_offset_by_cursor(col, row);
+        self.0.insert(i, s);
     }
 
     pub(crate) fn count_forward_word(&self, col: usize, row: usize) -> usize {
@@ -138,24 +132,23 @@ impl Buffer {
         (start, end)
     }
 
-    pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> Buffer {
+    pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> String {
         let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
         let range = start..end;
-        let seq: Rope = self.0.slice(range.clone()).into();
+        let seq = self.0.slice(range.clone()).into();
         self.0.remove(range);
-        Buffer(seq)
+        seq
     }
 
-    pub(crate) fn remove<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> Buffer {
-        let seq: Rope = self.0.slice(range.clone()).into();
+    pub(crate) fn remove<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> String {
+        let seq = self.0.slice(range.clone()).into();
         self.0.remove(range);
-        Buffer(seq)
+        seq
     }
 
-    pub(crate) fn subseq<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> Buffer {
-        let seq = self.0.slice(range);
-        Buffer(seq.into())
+    pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
+        self.0.slice(range).into()
     }
 
     pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
@@ -163,22 +156,8 @@ impl Buffer {
         self.0.insert_char(start, c);
     }
 
-    pub(crate) fn slice_as_str<I: RangeBounds<usize>>(&self, range: I) -> Cow<str> {
-        self.0.slice(range).into()
-    }
-
     pub(crate) fn as_str(&self) -> Cow<str> {
         (&self.0).into()
-    }
-
-    pub(crate) fn last_char(&self) -> Option<char> {
-        let offset = self.count_chars();
-        let s = self.slice_as_str(offset - 1..offset);
-        s.chars().last()
-    }
-
-    pub(crate) fn end_with_line_break(&self) -> bool {
-        self.last_char().map(|c| c == '\n').unwrap_or(false)
     }
 
     pub(crate) fn get_cursor_by_offset(&self, offset: usize) -> (usize, usize) {
@@ -203,5 +182,29 @@ impl From<Rope> for Buffer {
 impl From<Buffer> for Rope {
     fn from(b: Buffer) -> Rope {
         b.0
+    }
+}
+
+#[derive(Clone, Debug)]
+pub(crate) struct BufferSlice<'a>(RopeSlice<'a>);
+
+impl<'a> From<RopeSlice<'a>> for BufferSlice<'a> {
+    fn from(rope_slice: RopeSlice<'a>) -> Self {
+        BufferSlice(rope_slice)
+    }
+}
+
+impl<'a> BufferSlice<'a> {
+    pub(crate) fn as_str(&self) -> Cow<str> {
+        (self.0).into()
+    }
+
+    pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
+        let seq = self.0.slice(range);
+        BufferSlice(seq)
+    }
+
+    pub(crate) fn count_chars(&self) -> usize {
+        self.0.len_chars()
     }
 }

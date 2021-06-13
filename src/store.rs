@@ -142,7 +142,7 @@ impl Store {
                 self.movement(MovementKind::MoveTo(from), 1);
             }
             AppendYank => {
-                let col = if self.state.yanked.end_with_line_break() {
+                let col = if self.state.yanked.ends_with('\n') {
                     self.movement(MovementKind::CursorDown, 1);
                     0
                 } else {
@@ -153,12 +153,12 @@ impl Store {
                     self.state.buffer.insert(
                         col,
                         self.state.cursor.row + self.state.row_offset,
-                        self.state.yanked.clone(),
+                        &self.state.yanked,
                     );
                 }
             }
             InsertYank => {
-                let col = if self.state.yanked.end_with_line_break() {
+                let col = if self.state.yanked.ends_with('\n') {
                     0
                 } else {
                     self.state.cursor.col
@@ -167,7 +167,7 @@ impl Store {
                     self.state.buffer.insert(
                         col,
                         self.state.cursor.row + self.state.row_offset,
-                        self.state.yanked.clone(),
+                        &self.state.yanked,
                     );
                 }
             }
@@ -250,7 +250,7 @@ impl Store {
             },
             Yank(selection) => {
                 let (from, to) = self.state.measure_selection(selection);
-                let yank = self.state.buffer.subseq(from..to);
+                let yank = self.state.buffer.slice(from..to).as_str().to_string();
                 self.action(SetYank(yank).once());
             }
             Repeat => {

@@ -15,7 +15,7 @@ pub(crate) struct State {
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
     pub(crate) mode: Mode,
-    pub(crate) yanked: Buffer,
+    pub(crate) yanked: String,
     pub(crate) size: (u16, u16),
     pub(crate) buffer: Buffer,
     pub(crate) prev_edit: Option<(EditKind, usize)>,

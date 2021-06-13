@@ -1,4 +1,3 @@
-use crate::buffer::Buffer;
 use crate::state::State;
 use flume::Sender;
 
@@ -116,7 +115,7 @@ pub(crate) enum ActionKind {
     IntoInsertMode,
     IntoNormalMode,
     IntoCmdLineMode,
-    SetYank(Buffer),
+    SetYank(String),
     PushCmd(char),
     PushCmdStr(String),
     PopCmd,

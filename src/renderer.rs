@@ -1,7 +1,6 @@
 use crate::mode::Mode;
 use crate::state::State;
 use core::cmp::{max, min};
-use std::borrow::Cow;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use unicode_width::UnicodeWidthStr;
@@ -44,7 +43,7 @@ impl Renderer {
                 self.stdout,
                 " {:max_line_digit$} {:>1}",
                 state.row_offset + i + 1,
-                line.chars().take(textarea_col as usize).collect::<String>(),
+                line.slice(..textarea_col as usize).as_str(),
                 max_line_digit = max_line_digit
             )
             .unwrap();
@@ -82,8 +81,11 @@ impl Renderer {
 
         let line = state.buffer.line(row);
 
-        let s: Cow<str> = line.slice(..min(col + 1, line.len_chars())).into();
-        let width = UnicodeWidthStr::width(&*s);
+        let s = line
+            .slice(..min(col + 1, line.count_chars()))
+            .as_str()
+            .to_string();
+        let width = UnicodeWidthStr::width(s.as_str());
 
         write!(
             self.stdout,
