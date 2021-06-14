@@ -31,7 +31,6 @@ impl Renderer {
         let textarea_row = state.size.1 - 2;
         let line_count = state.buffer.count_lines();
         let max_line_digit = format!("{}", line_count).chars().count();
-        let textarea_col = state.size.0 - max_line_digit as u16 - 2;
         for (i, line) in state
             .buffer
             .lines_at(state.row_offset)
@@ -43,7 +42,7 @@ impl Renderer {
                 self.stdout,
                 " {:max_line_digit$} {:>1}",
                 state.row_offset + i + 1,
-                line.slice(..textarea_col as usize).as_str(),
+                line.as_str(),
                 max_line_digit = max_line_digit
             )
             .unwrap();
