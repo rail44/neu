@@ -10,6 +10,7 @@ mod action;
 mod buffer;
 mod cmd;
 mod cmdline;
+mod compute;
 mod config;
 mod editor;
 mod mode;

@@ -1,9 +1,28 @@
+use crate::compute::{ComputableFromState, Compute, CurrentLine, MaxLineDigit};
 use crate::mode::Mode;
-use crate::state::State;
-use core::cmp::{max, min};
+use crate::state::{Cursor, State};
+use core::cmp::max;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use unicode_width::UnicodeWidthStr;
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct CursorProps {
+    cursor: Cursor,
+    current_line: CurrentLine,
+    max_line_digit: MaxLineDigit,
+}
+
+impl Compute for CursorProps {
+    type Source = State;
+    fn compute(source: &State) -> Self {
+        Self {
+            cursor: Cursor::compute_from_state(source),
+            current_line: CurrentLine::compute_from_state(source),
+            max_line_digit: MaxLineDigit::compute_from_state(source),
+        }
+    }
+}
 
 pub(crate) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
@@ -20,7 +39,6 @@ impl Renderer {
 
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
-        tracing::error!("{:?}", state);
         write!(
             self.stdout,
             "{}{}",
@@ -43,7 +61,7 @@ impl Renderer {
                 self.stdout,
                 " {:max_line_digit$} {:>1}",
                 state.row_offset + i + 1,
-                line.slice(..textarea_col as usize).as_str(),
+                line.as_str(),
                 max_line_digit = max_line_digit
             )
             .unwrap();
@@ -76,24 +94,30 @@ impl Renderer {
                 .unwrap();
             }
         };
-        let col = state.cursor.col;
-        let row = state.cursor.row;
 
-        let line = state.buffer.line(row);
+        let props = CursorProps::compute_from_state(state);
+        self.render_cursor(props);
 
-        let s = line
-            .slice(..min(col + 1, line.count_chars()))
-            .as_str()
-            .to_string();
-        let width = UnicodeWidthStr::width(s.as_str());
+        self.stdout.flush().unwrap();
+    }
 
+    fn render_cursor(&mut self, props: CursorProps) {
+        let cursor = props.cursor;
+        let col = cursor.col;
+        let row = cursor.row;
+
+        let current_line = props.current_line.0;
+        let end = current_line.char_indices().take(col + 2).last().unwrap().0;
+        let s = &current_line[..end];
+        let width = UnicodeWidthStr::width(s);
+
+        let max_line_digit = props.max_line_digit.0;
         write!(
             self.stdout,
             "{}",
             termion::cursor::Goto((max_line_digit + 2 + max(1, width)) as u16, row as u16 + 1)
         )
         .unwrap();
-        self.stdout.flush().unwrap();
     }
 }
 

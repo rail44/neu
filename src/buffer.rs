@@ -198,13 +198,4 @@ impl<'a> BufferSlice<'a> {
     pub(crate) fn as_str(&self) -> Cow<str> {
         (self.0).into()
     }
-
-    pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
-        let seq = self.0.slice(range);
-        BufferSlice(seq)
-    }
-
-    pub(crate) fn count_chars(&self) -> usize {
-        self.0.len_chars()
-    }
 }
