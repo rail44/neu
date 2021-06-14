@@ -20,7 +20,6 @@ impl Renderer {
 
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
-        tracing::error!("{:?}", state);
         write!(
             self.stdout,
             "{}{}",
