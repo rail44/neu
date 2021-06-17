@@ -72,7 +72,7 @@ where
     fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         let source = reactor.compute();
         if let Some(computed) = reactor.get_computed::<Self>() {
-            if &source == &computed.source {
+            if source == computed.source {
                 return computed.value.clone();
             }
         }
@@ -109,9 +109,7 @@ where
 }
 
 impl ComputeWithReactor for () {
-    fn compute_with_reactor(_reactor: &mut Reactor) -> Self {
-        ()
-    }
+    fn compute_with_reactor(_reactor: &mut Reactor) -> Self {}
 }
 
 impl ComputeWithReactor for State {
