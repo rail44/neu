@@ -29,7 +29,7 @@ impl CharKind {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct Buffer(Rope);
 
 impl Buffer {
@@ -197,14 +197,5 @@ impl<'a> From<RopeSlice<'a>> for BufferSlice<'a> {
 impl<'a> BufferSlice<'a> {
     pub(crate) fn as_str(&self) -> Cow<str> {
         (self.0).into()
-    }
-
-    pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
-        let seq = self.0.slice(range);
-        BufferSlice(seq)
-    }
-
-    pub(crate) fn count_chars(&self) -> usize {
-        self.0.len_chars()
     }
 }

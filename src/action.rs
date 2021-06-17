@@ -1,13 +1,13 @@
 use crate::state::State;
 use flume::Sender;
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) struct Selection {
     pub(crate) count: usize,
     pub(crate) kind: SelectionKind,
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum SelectionKind {
     Left,
     Down,
@@ -75,7 +75,7 @@ impl From<MovementKind> for ActionKind {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub(crate) enum EditKind {
     LineBreak,
     InsertChar(char),

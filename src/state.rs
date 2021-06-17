@@ -4,13 +4,13 @@ use crate::mode::Mode;
 
 use termion::terminal_size;
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct Cursor {
     pub(crate) row: usize,
     pub(crate) col: usize,
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct State {
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
