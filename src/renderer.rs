@@ -7,7 +7,7 @@ use termion::raw::{IntoRawMode, RawTerminal};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct CursorProps {
+struct CursorProps {
     cursor: Cursor,
     current_line: CurrentLine,
     max_line_digit: MaxLineDigit,

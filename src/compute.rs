@@ -1,9 +1,12 @@
 use crate::buffer::Buffer;
 use crate::state::{Cursor, State};
-use std::any::{TypeId, Any};
 use hashbrown::HashMap;
+use std::any::{Any, TypeId};
 
-pub(crate) struct Computed<C> where C: Compute {
+struct Computed<C>
+where
+    C: Compute,
+{
     value: C,
     source: C::Source,
 }
@@ -21,10 +24,6 @@ impl Reactor {
         }
     }
 
-    pub(crate) fn state(&self) -> &State {
-        &self.state
-    }
-
     pub(crate) fn compute<C: ComputeWithReactor>(&mut self) -> C {
         C::compute_with_reactor(self)
     }
@@ -33,14 +32,27 @@ impl Reactor {
         self.state = state;
     }
 
-    fn insert_computed<C>(&mut self, value: C, source: C::Source) where C: Compute {
-        let type_id = TypeId::of::<C>();
-        self.computed_map.insert(type_id, Box::new(Computed { value , source }));
+    fn state(&self) -> &State {
+        &self.state
     }
 
-    fn get_computed<C>(&self) -> Option<&Computed<C>> where C: Compute {
+    fn insert_computed<C>(&mut self, value: C, source: C::Source)
+    where
+        C: Compute,
+    {
         let type_id = TypeId::of::<C>();
-        self.computed_map.get(&type_id).and_then(|any| any.downcast_ref())
+        self.computed_map
+            .insert(type_id, Box::new(Computed { value, source }));
+    }
+
+    fn get_computed<C>(&self) -> Option<&Computed<C>>
+    where
+        C: Compute,
+    {
+        let type_id = TypeId::of::<C>();
+        self.computed_map
+            .get(&type_id)
+            .and_then(|any| any.downcast_ref())
     }
 }
 
@@ -65,7 +77,7 @@ where
             }
         }
         let v = C::compute(&source);
-        reactor.insert_computed(v.clone() ,source);
+        reactor.insert_computed(v.clone(), source);
         v
     }
 }
