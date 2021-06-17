@@ -29,7 +29,7 @@ impl CharKind {
     }
 }
 
-#[derive(Default, Clone, Debug)]
+#[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct Buffer(Rope);
 
 impl Buffer {

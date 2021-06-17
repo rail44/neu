@@ -1,4 +1,4 @@
-use crate::compute::{ComputableFromState, Compute, CurrentLine, MaxLineDigit};
+use crate::compute::{Compute, CurrentLine, MaxLineDigit, Reactor};
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
@@ -14,18 +14,19 @@ pub(crate) struct CursorProps {
 }
 
 impl Compute for CursorProps {
-    type Source = State;
-    fn compute(source: &State) -> Self {
+    type Source = (Cursor, CurrentLine, MaxLineDigit);
+    fn compute(source: &Self::Source) -> Self {
         Self {
-            cursor: Cursor::compute_from_state(source),
-            current_line: CurrentLine::compute_from_state(source),
-            max_line_digit: MaxLineDigit::compute_from_state(source),
+            cursor: source.0.clone(),
+            current_line: source.1.clone(),
+            max_line_digit: source.2.clone(),
         }
     }
 }
 
 pub(crate) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
+    reactor: Reactor,
 }
 
 impl Renderer {
@@ -33,12 +34,17 @@ impl Renderer {
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
         stdout.flush().unwrap();
-        Self { stdout }
+        Self {
+            stdout,
+            reactor: Reactor::new(),
+        }
     }
 }
 
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
+        self.reactor.load_state(state.clone());
+
         write!(
             self.stdout,
             "{}{}",
@@ -94,7 +100,7 @@ impl Renderer {
             }
         };
 
-        let props = CursorProps::compute_from_state(state);
+        let props = self.reactor.compute();
         self.render_cursor(props);
 
         self.stdout.flush().unwrap();
@@ -106,7 +112,12 @@ impl Renderer {
         let row = cursor.row;
 
         let current_line = props.current_line.0;
-        let end = current_line.char_indices().take(col + 2).last().unwrap().0;
+        let end = current_line
+            .char_indices()
+            .take(col + 2)
+            .last()
+            .map(|(i, _)| i)
+            .unwrap_or(0);
         let s = &current_line[..end];
         let width = UnicodeWidthStr::width(s);
 

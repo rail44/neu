@@ -1,38 +1,93 @@
 use crate::buffer::Buffer;
 use crate::state::{Cursor, State};
+use std::any::{TypeId, Any};
+use hashbrown::HashMap;
+
+pub(crate) struct Computed<C> where C: Compute {
+    prev: C,
+    source: C::Source,
+}
+
+pub(crate) struct Reactor {
+    state: State,
+    computed_map: HashMap<TypeId, Box<(dyn Compute, dyn Compute)>>,
+}
+
+impl Reactor {
+    pub(crate) fn new() -> Self {
+        Self {
+            state: State::new(),
+            computed_map: HashMap::new(),
+        }
+    }
+
+    pub(crate) fn state(&self) -> &State {
+        &self.state
+    }
+
+    pub(crate) fn compute<C: ComputeWithReactor>(&self) -> C {
+        C::compute_with_reactor(self)
+    }
+
+    pub(crate) fn load_state(&mut self, state: State) {
+        self.state = state;
+    }
+}
+
+pub(crate) trait ComputeWithReactor {
+    fn compute_with_reactor(reactor: &Reactor) -> Self;
+}
 
 pub(crate) trait Compute {
-    type Source;
+    type Source: ComputeWithReactor;
     fn compute(source: &Self::Source) -> Self;
 }
 
-pub(crate) trait ComputableFromState {
-    fn compute_from_state(state: &State) -> Self;
-}
-
-impl<V, S> ComputableFromState for V
+impl<C> ComputeWithReactor for C
 where
-    V: Compute<Source = S>,
-    S: ComputableFromState,
+    C: Compute,
 {
-    fn compute_from_state(state: &State) -> Self {
-        Self::compute(&S::compute_from_state(state))
+    fn compute_with_reactor(reactor: &Reactor) -> Self {
+        let source = reactor.compute();
+        C::compute(&source)
     }
 }
 
-impl<T1, T2> ComputableFromState for (T1, T2)
+impl<T1, T2> ComputeWithReactor for (T1, T2)
 where
-    T1: ComputableFromState,
-    T2: ComputableFromState,
+    T1: Compute,
+    T2: Compute,
 {
-    fn compute_from_state(state: &State) -> Self {
-        (T1::compute_from_state(state), T2::compute_from_state(state))
+    fn compute_with_reactor(reactor: &Reactor) -> Self {
+        let t1 = reactor.compute();
+        let t2 = reactor.compute();
+        (t1, t2)
     }
 }
 
-impl ComputableFromState for State {
-    fn compute_from_state(state: &State) -> Self {
-        state.clone()
+impl<T1, T2, T3> ComputeWithReactor for (T1, T2, T3)
+where
+    T1: Compute,
+    T2: Compute,
+    T3: Compute,
+{
+    fn compute_with_reactor(reactor: &Reactor) -> Self {
+        let t1 = reactor.compute();
+        let t2 = reactor.compute();
+        let t3 = reactor.compute();
+        (t1, t2, t3)
+    }
+}
+
+impl ComputeWithReactor for () {
+    fn compute_with_reactor(_reactor: &Reactor) -> Self {
+        ()
+    }
+}
+
+impl ComputeWithReactor for State {
+    fn compute_with_reactor(reactor: &Reactor) -> Self {
+        reactor.state().clone()
     }
 }
 
