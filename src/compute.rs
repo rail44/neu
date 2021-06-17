@@ -4,13 +4,13 @@ use std::any::{TypeId, Any};
 use hashbrown::HashMap;
 
 pub(crate) struct Computed<C> where C: Compute {
-    prev: C,
+    value: C,
     source: C::Source,
 }
 
 pub(crate) struct Reactor {
     state: State,
-    computed_map: HashMap<TypeId, Box<(dyn Compute, dyn Compute)>>,
+    computed_map: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Reactor {
@@ -25,20 +25,30 @@ impl Reactor {
         &self.state
     }
 
-    pub(crate) fn compute<C: ComputeWithReactor>(&self) -> C {
+    pub(crate) fn compute<C: ComputeWithReactor>(&mut self) -> C {
         C::compute_with_reactor(self)
     }
 
     pub(crate) fn load_state(&mut self, state: State) {
         self.state = state;
     }
+
+    fn insert_computed<C>(&mut self, value: C, source: C::Source) where C: Compute {
+        let type_id = TypeId::of::<C>();
+        self.computed_map.insert(type_id, Box::new(Computed { value , source }));
+    }
+
+    fn get_computed<C>(&self) -> Option<&Computed<C>> where C: Compute {
+        let type_id = TypeId::of::<C>();
+        self.computed_map.get(&type_id).and_then(|any| any.downcast_ref())
+    }
 }
 
-pub(crate) trait ComputeWithReactor {
-    fn compute_with_reactor(reactor: &Reactor) -> Self;
+pub(crate) trait ComputeWithReactor: PartialEq {
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self;
 }
 
-pub(crate) trait Compute {
+pub(crate) trait Compute: 'static + PartialEq + Clone {
     type Source: ComputeWithReactor;
     fn compute(source: &Self::Source) -> Self;
 }
@@ -47,9 +57,16 @@ impl<C> ComputeWithReactor for C
 where
     C: Compute,
 {
-    fn compute_with_reactor(reactor: &Reactor) -> Self {
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         let source = reactor.compute();
-        C::compute(&source)
+        if let Some(computed) = reactor.get_computed::<Self>() {
+            if &source == &computed.source {
+                return computed.value.clone();
+            }
+        }
+        let v = C::compute(&source);
+        reactor.insert_computed(v.clone() ,source);
+        v
     }
 }
 
@@ -58,7 +75,7 @@ where
     T1: Compute,
     T2: Compute,
 {
-    fn compute_with_reactor(reactor: &Reactor) -> Self {
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         let t1 = reactor.compute();
         let t2 = reactor.compute();
         (t1, t2)
@@ -71,7 +88,7 @@ where
     T2: Compute,
     T3: Compute,
 {
-    fn compute_with_reactor(reactor: &Reactor) -> Self {
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         let t1 = reactor.compute();
         let t2 = reactor.compute();
         let t3 = reactor.compute();
@@ -80,13 +97,13 @@ where
 }
 
 impl ComputeWithReactor for () {
-    fn compute_with_reactor(_reactor: &Reactor) -> Self {
+    fn compute_with_reactor(_reactor: &mut Reactor) -> Self {
         ()
     }
 }
 
 impl ComputeWithReactor for State {
-    fn compute_with_reactor(reactor: &Reactor) -> Self {
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         reactor.state().clone()
     }
 }
