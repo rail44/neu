@@ -214,7 +214,7 @@ impl Compute for RowOffset {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct LineRange(pub(crate) std::ops::Range<usize>);
+pub(crate) struct LineRange(pub(crate) usize, pub(crate) usize);
 
 impl Compute for LineRange {
     type Source = (RowOffset, LineCount, TerminalHeight);
@@ -223,6 +223,6 @@ impl Compute for LineRange {
         let line_count = source.1 .0;
         let textarea_row = source.2 .0 - 2;
 
-        Self(row_offset..min(line_count, textarea_row + row_offset + 1))
+        Self(row_offset, min(line_count, textarea_row + row_offset + 1))
     }
 }
