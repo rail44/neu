@@ -1,10 +1,26 @@
-use crate::compute::{Compute, CurrentLine, MaxLineDigit, Reactor, TerminalHeight};
+use crate::compute::{Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, TerminalHeight};
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use unicode_width::UnicodeWidthStr;
+
+#[derive(PartialEq, Clone, Debug)]
+struct LineNumberProps {
+    max_line_digit: usize,
+    line_range: std::ops::Range<usize>,
+}
+
+impl Compute for LineNumberProps {
+    type Source = (MaxLineDigit, LineRange);
+    fn compute(source: &Self::Source) -> Self {
+        Self {
+            max_line_digit: source.0 .0,
+            line_range: source.1 .0.clone(),
+        }
+    }
+}
 
 #[derive(PartialEq, Clone, Debug)]
 struct CursorProps {
@@ -18,8 +34,8 @@ impl Compute for CursorProps {
     fn compute(source: &Self::Source) -> Self {
         Self {
             cursor: source.0.clone(),
-            current_line: source.1.0.clone(),
-            max_line_digit: source.2.0,
+            current_line: source.1 .0.clone(),
+            max_line_digit: source.2 .0,
         }
     }
 }
@@ -35,7 +51,7 @@ impl Compute for StatusLineProps {
     fn compute(source: &Self::Source) -> Self {
         Self {
             mode: source.0.clone(),
-            terminal_height: source.1.0,
+            terminal_height: source.1 .0,
         }
     }
 }
@@ -77,16 +93,17 @@ impl Renderer {
             .take(textarea_row as usize)
             .enumerate()
         {
-            write!(self.stdout, "{}", termion::cursor::Goto(1, (i + 1) as u16),).unwrap();
             write!(
                 self.stdout,
-                " {:max_line_digit$} {:>1}",
-                state.row_offset + i + 1,
-                line.as_str(),
-                max_line_digit = max_line_digit
+                "{}",
+                termion::cursor::Goto(max_line_digit as u16 + 2, (i + 1) as u16),
             )
             .unwrap();
+            write!(self.stdout, "{}", line.as_str(),).unwrap();
         }
+
+        let props = self.reactor.compute();
+        self.render_line_number(props);
 
         let props = self.reactor.compute();
         self.render_status_line(props);
@@ -97,11 +114,26 @@ impl Renderer {
         self.stdout.flush().unwrap();
     }
 
+    fn render_line_number(&mut self, props: LineNumberProps) {
+        let max_line_digit = props.max_line_digit;
+        let line_range = props.line_range;
+        for (i, line_index) in line_range.enumerate() {
+            write!(self.stdout, "{}", termion::cursor::Goto(1, i as u16 + 1)).unwrap();
+            write!(
+                self.stdout,
+                "{:max_line_digit$}",
+                line_index + 1,
+                max_line_digit = max_line_digit
+            )
+            .unwrap();
+        }
+    }
+
     fn render_status_line(&mut self, props: StatusLineProps) {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto(1, props.terminal_height as u16 - 1)
+            termion::cursor::Goto(1, props.terminal_height as u16)
         )
         .unwrap();
         match &props.mode {
@@ -147,7 +179,7 @@ impl Renderer {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto((max_line_digit + 2 + max(1, width)) as u16, row as u16 + 1)
+            termion::cursor::Goto((max_line_digit + 1 + max(1, width)) as u16, row as u16 + 1)
         )
         .unwrap();
     }

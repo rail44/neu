@@ -1,6 +1,7 @@
 use crate::buffer::Buffer;
-use crate::state::{Cursor, State};
 use crate::mode::Mode;
+use crate::state::{Cursor, State};
+use core::cmp::min;
 use hashbrown::HashMap;
 use std::any::{Any, TypeId};
 
@@ -89,9 +90,7 @@ where
     T2: Compute,
 {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self {
-        let t1 = reactor.compute();
-        let t2 = reactor.compute();
-        (t1, t2)
+        (reactor.compute(), reactor.compute())
     }
 }
 
@@ -102,10 +101,24 @@ where
     T3: Compute,
 {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self {
-        let t1 = reactor.compute();
-        let t2 = reactor.compute();
-        let t3 = reactor.compute();
-        (t1, t2, t3)
+        (reactor.compute(), reactor.compute(), reactor.compute())
+    }
+}
+
+impl<T1, T2, T3, T4> ComputeWithReactor for (T1, T2, T3, T4)
+where
+    T1: Compute,
+    T2: Compute,
+    T3: Compute,
+    T4: Compute,
+{
+    fn compute_with_reactor(reactor: &mut Reactor) -> Self {
+        (
+            reactor.compute(),
+            reactor.compute(),
+            reactor.compute(),
+            reactor.compute(),
+        )
     }
 }
 
@@ -187,5 +200,29 @@ impl Compute for Mode {
     type Source = State;
     fn compute(source: &Self::Source) -> Self {
         source.mode.clone()
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct RowOffset(pub(crate) usize);
+
+impl Compute for RowOffset {
+    type Source = State;
+    fn compute(source: &Self::Source) -> Self {
+        Self(source.row_offset)
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct LineRange(pub(crate) std::ops::Range<usize>);
+
+impl Compute for LineRange {
+    type Source = (RowOffset, LineCount, TerminalHeight);
+    fn compute(source: &Self::Source) -> Self {
+        let row_offset = source.0 .0;
+        let line_count = source.1 .0;
+        let textarea_row = source.2 .0 - 2;
+
+        Self(row_offset..min(line_count, textarea_row + row_offset + 1))
     }
 }
