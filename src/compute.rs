@@ -1,5 +1,6 @@
 use crate::buffer::Buffer;
 use crate::state::{Cursor, State};
+use crate::mode::Mode;
 use hashbrown::HashMap;
 use std::any::{Any, TypeId};
 
@@ -169,5 +170,22 @@ impl Compute for Cursor {
     type Source = State;
     fn compute(source: &Self::Source) -> Self {
         source.cursor.clone()
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct TerminalHeight(pub(crate) usize);
+
+impl Compute for TerminalHeight {
+    type Source = State;
+    fn compute(source: &Self::Source) -> Self {
+        Self(source.size.1 as usize - 1)
+    }
+}
+
+impl Compute for Mode {
+    type Source = State;
+    fn compute(source: &Self::Source) -> Self {
+        source.mode.clone()
     }
 }

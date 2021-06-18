@@ -1,4 +1,4 @@
-use crate::compute::{Compute, CurrentLine, MaxLineDigit, Reactor};
+use crate::compute::{Compute, CurrentLine, MaxLineDigit, Reactor, TerminalHeight};
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
@@ -9,8 +9,8 @@ use unicode_width::UnicodeWidthStr;
 #[derive(PartialEq, Clone, Debug)]
 struct CursorProps {
     cursor: Cursor,
-    current_line: CurrentLine,
-    max_line_digit: MaxLineDigit,
+    current_line: String,
+    max_line_digit: usize,
 }
 
 impl Compute for CursorProps {
@@ -18,8 +18,24 @@ impl Compute for CursorProps {
     fn compute(source: &Self::Source) -> Self {
         Self {
             cursor: source.0.clone(),
-            current_line: source.1.clone(),
-            max_line_digit: source.2.clone(),
+            current_line: source.1.0.clone(),
+            max_line_digit: source.2.0,
+        }
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+struct StatusLineProps {
+    mode: Mode,
+    terminal_height: usize,
+}
+
+impl Compute for StatusLineProps {
+    type Source = (Mode, TerminalHeight);
+    fn compute(source: &Self::Source) -> Self {
+        Self {
+            mode: source.0.clone(),
+            terminal_height: source.1.0,
         }
     }
 }
@@ -71,13 +87,24 @@ impl Renderer {
             )
             .unwrap();
         }
+
+        let props = self.reactor.compute();
+        self.render_status_line(props);
+
+        let props = self.reactor.compute();
+        self.render_cursor(props);
+
+        self.stdout.flush().unwrap();
+    }
+
+    fn render_status_line(&mut self, props: StatusLineProps) {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto(1, state.size.1 - 1)
+            termion::cursor::Goto(1, props.terminal_height as u16 - 1)
         )
         .unwrap();
-        match &state.mode {
+        match &props.mode {
             Mode::Normal(cmd) => {
                 if cmd.is_empty() {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyBlock).unwrap();
@@ -93,17 +120,12 @@ impl Renderer {
                     self.stdout,
                     "{}COMMAND{}:{}",
                     termion::cursor::SteadyBlock,
-                    termion::cursor::Goto(0, state.size.1),
+                    termion::cursor::Goto(0, props.terminal_height as u16),
                     cmd
                 )
                 .unwrap();
             }
         };
-
-        let props = self.reactor.compute();
-        self.render_cursor(props);
-
-        self.stdout.flush().unwrap();
     }
 
     fn render_cursor(&mut self, props: CursorProps) {
@@ -111,7 +133,7 @@ impl Renderer {
         let col = cursor.col;
         let row = cursor.row;
 
-        let current_line = props.current_line.0;
+        let current_line = props.current_line;
         let end = current_line
             .char_indices()
             .take(col + 2)
@@ -121,7 +143,7 @@ impl Renderer {
         let s = &current_line[..end];
         let width = UnicodeWidthStr::width(s);
 
-        let max_line_digit = props.max_line_digit.0;
+        let max_line_digit = props.max_line_digit;
         write!(
             self.stdout,
             "{}",
