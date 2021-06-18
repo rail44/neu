@@ -9,11 +9,13 @@ struct Computed<C>
 where
     C: Compute,
 {
+    generation: usize,
     value: C,
     source: C::Source,
 }
 
 pub(crate) struct Reactor {
+    generation: usize,
     state: State,
     computed_map: HashMap<TypeId, Box<dyn Any>>,
 }
@@ -21,16 +23,34 @@ pub(crate) struct Reactor {
 impl Reactor {
     pub(crate) fn new() -> Self {
         Self {
+            generation: 0,
             state: State::new(),
             computed_map: HashMap::new(),
         }
+    }
+
+    pub(crate) fn generation(&self) -> usize {
+        self.generation
     }
 
     pub(crate) fn compute<C: ComputeWithReactor>(&mut self) -> C {
         C::compute_with_reactor(self)
     }
 
+    pub(crate) fn get_update<C: Compute>(&mut self) -> Option<C> {
+        let source = C::Source::compute_with_reactor(self);
+        if let Some(computed) = self.get_computed::<C>() {
+            if source == computed.source {
+                return None;
+            }
+        }
+        let v = C::compute(&source);
+        self.insert_computed(v.clone(), source);
+        Some(v)
+    }
+
     pub(crate) fn load_state(&mut self, state: State) {
+        self.generation = self.generation.wrapping_add(1);
         self.state = state;
     }
 
@@ -43,8 +63,14 @@ impl Reactor {
         C: Compute,
     {
         let type_id = TypeId::of::<C>();
-        self.computed_map
-            .insert(type_id, Box::new(Computed { value, source }));
+        self.computed_map.insert(
+            type_id,
+            Box::new(Computed {
+                generation: self.generation,
+                value,
+                source,
+            }),
+        );
     }
 
     fn get_computed<C>(&self) -> Option<&Computed<C>>
@@ -73,11 +99,17 @@ where
 {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self {
         let source = reactor.compute();
-        if let Some(computed) = reactor.get_computed::<Self>() {
+        let computed = reactor.get_computed::<Self>();
+        if let Some(computed) = computed {
+            if reactor.generation() == computed.generation {
+                return computed.value.clone();
+            }
+
             if source == computed.source {
                 return computed.value.clone();
             }
         }
+
         let v = C::compute(&source);
         reactor.insert_computed(v.clone(), source);
         v
@@ -163,9 +195,9 @@ impl Compute for MaxLineDigit {
 pub(crate) struct CurrentLine(pub(crate) String);
 
 impl Compute for CurrentLine {
-    type Source = (Buffer, CursorRow);
+    type Source = (Buffer, CursorRow, RowOffset);
     fn compute(source: &Self::Source) -> Self {
-        Self(source.0.line(source.1 .0).as_str().to_string())
+        Self(source.0.line(source.1 .0 + source.2 .0).as_str().to_string())
     }
 }
 

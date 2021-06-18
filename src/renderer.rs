@@ -84,6 +84,7 @@ impl Renderer {
     pub(crate) fn new() -> Self {
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
+        write!(stdout, "{}", termion::clear::All).unwrap();
         stdout.flush().unwrap();
         Self {
             stdout,
@@ -95,6 +96,7 @@ impl Renderer {
 impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
+
         self.reactor.load_state(state.clone());
 
         let props = self.reactor.compute();
