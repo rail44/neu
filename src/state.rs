@@ -43,21 +43,21 @@ impl State {
 
     pub(crate) fn get_cursor_offset(&self) -> usize {
         self.buffer
-            .get_offset_by_cursor(self.cursor.col, self.cursor.row + self.row_offset)
+            .get_offset_by_cursor(self.cursor.col, self.cursor.row)
     }
 
     pub(crate) fn count_word_back(&self) -> usize {
         self.buffer
-            .count_back_word(self.cursor.col, self.cursor.row + self.row_offset)
+            .count_back_word(self.cursor.col, self.cursor.row)
     }
 
     pub(crate) fn count_word_forward(&self) -> usize {
         self.buffer
-            .count_forward_word(self.cursor.col, self.cursor.row + self.row_offset)
+            .count_forward_word(self.cursor.col, self.cursor.row)
     }
 
     pub(crate) fn current_line(&self) -> (usize, usize) {
-        self.buffer.current_line(self.cursor.row + self.row_offset)
+        self.buffer.current_line(self.cursor.row)
     }
 
     pub(crate) fn measure_selection(&self, s: Selection) -> (usize, usize) {

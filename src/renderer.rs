@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use crate::compute::{Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, TerminalHeight};
+use crate::compute::{Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, TerminalHeight, RowOffset};
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
@@ -46,15 +46,17 @@ struct CursorProps {
     cursor: Cursor,
     current_line: String,
     max_line_digit: usize,
+    row_offset: usize,
 }
 
 impl Compute for CursorProps {
-    type Source = (Cursor, CurrentLine, MaxLineDigit);
+    type Source = (Cursor, CurrentLine, MaxLineDigit, RowOffset);
     fn compute(source: &Self::Source) -> Self {
         Self {
             cursor: source.0.clone(),
             current_line: source.1 .0.clone(),
             max_line_digit: source.2 .0,
+            row_offset: source.3 .0,
         }
     }
 }
@@ -115,6 +117,7 @@ impl Renderer {
     }
 
     fn render_text_area(&mut self, props: TextAreaProps) {
+        tracing::debug!("{:?}", props);
         let max_line_digit = props.max_line_digit;
         for (i, line) in props
             .buffer
@@ -180,8 +183,9 @@ impl Renderer {
 
     fn render_cursor(&mut self, props: CursorProps) {
         let cursor = props.cursor;
+        let row_offset = props.row_offset;
         let col = cursor.col;
-        let row = cursor.row;
+        let row = cursor.row - row_offset;
 
         let current_line = props.current_line;
         let end = current_line

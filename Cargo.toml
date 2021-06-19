@@ -9,6 +9,7 @@ license = "Unlicense"
 [dependencies]
 anyhow = "1.0.40"
 async-trait = "0.1.48"
+backtrace = "0.3.60"
 clap = "3.0.0-beta.2"
 dirs = "3.0.2"
 flume = "0.10.5"

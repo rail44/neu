@@ -3,6 +3,7 @@ use std::fs;
 use std::panic;
 use std::sync::Mutex;
 
+use backtrace::Backtrace;
 use clap::{crate_authors, crate_version, Clap};
 use dirs::home_dir;
 
@@ -44,12 +45,14 @@ fn main() {
             .unwrap();
         let writer = Mutex::new(log_file);
         tracing_subscriber::fmt()
+            .pretty()
             .with_writer(writer)
             .with_max_level(tracing::Level::DEBUG)
             .init();
     }
 
     panic::set_hook(Box::new(|e| {
+        tracing::error!("{:?}", Backtrace::new());
         tracing::error!("{}", e);
     }));
 
