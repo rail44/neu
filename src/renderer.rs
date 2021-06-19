@@ -203,15 +203,15 @@ impl Renderer {
     }
 }
 
-// impl Drop for Renderer {
-//     fn drop(&mut self) {
-//         write!(
-//             self.stdout,
-//             "{}{}",
-//             termion::clear::All,
-//             termion::screen::ToMainScreen
-//         )
-//         .unwrap();
-//         self.stdout.flush().unwrap();
-//     }
-// }
+impl Drop for Renderer {
+    fn drop(&mut self) {
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::clear::All,
+            termion::screen::ToMainScreen
+        )
+        .unwrap();
+        self.stdout.flush().unwrap();
+    }
+}
