@@ -17,6 +17,7 @@ pub(crate) enum SelectionKind {
     BackWord,
     Word,
     Line,
+    LineRemain,
 }
 
 impl SelectionKind {

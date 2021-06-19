@@ -126,6 +126,12 @@ impl Buffer {
         i
     }
 
+    pub(crate) fn current_line_remain(&self, col: usize, row: usize) -> (usize, usize) {
+        let offset = self.get_offset_by_cursor(col, row);
+        let end = self.0.line_to_char(row + 1);
+        (offset, end - 1)
+    }
+
     pub(crate) fn current_line(&self, row: usize) -> (usize, usize) {
         let start = self.0.line_to_char(row);
         let end = self.0.line_to_char(row + 1);

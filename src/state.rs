@@ -60,6 +60,11 @@ impl State {
         self.buffer.current_line(self.cursor.row)
     }
 
+    pub(crate) fn current_line_remain(&self) -> (usize, usize) {
+        self.buffer
+            .current_line_remain(self.cursor.col, self.cursor.row)
+    }
+
     pub(crate) fn measure_selection(&self, s: Selection) -> (usize, usize) {
         let cursor_offset = self.get_cursor_offset();
 
@@ -95,6 +100,7 @@ impl State {
                 (cursor_offset - back_count, cursor_offset + forward_count)
             }
             Line => self.current_line(),
+            LineRemain => self.current_line_remain(),
         }
     }
 }

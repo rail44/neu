@@ -1,5 +1,7 @@
 use crate::buffer::Buffer;
-use crate::compute::{Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, TerminalHeight, RowOffset};
+use crate::compute::{
+    Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, RowOffset, TerminalHeight,
+};
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;

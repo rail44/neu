@@ -52,7 +52,10 @@ impl Store {
         let state = &mut self.state;
         let textarea_row = (state.size.1 - 2) as usize;
 
-        state.row_offset = max(min(state.cursor.row, state.row_offset), (state.cursor.row + 1).saturating_sub(textarea_row));
+        state.row_offset = max(
+            min(state.cursor.row, state.row_offset),
+            (state.cursor.row + 1).saturating_sub(textarea_row),
+        );
     }
 
     fn notify(&mut self) {
@@ -69,7 +72,10 @@ impl Store {
             }
             CursorDown => {
                 state.cursor.row += count;
-                state.cursor.row = min(state.buffer.count_lines().saturating_sub(1), state.cursor.row);
+                state.cursor.row = min(
+                    state.buffer.count_lines().saturating_sub(1),
+                    state.cursor.row,
+                );
             }
             CursorUp => {
                 state.cursor.row = state.cursor.row.saturating_sub(count);

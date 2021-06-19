@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, digit0, digit1},
+    character::complete::{anychar, digit0},
     combinator::map,
     multi::many_till,
     sequence::pair,
@@ -18,6 +18,9 @@ fn remove(input: &str) -> IResult<&str, ActionKind> {
         }),
         map(pair(tag("d"), selection::parse), |(_, s)| {
             EditKind::Remove(s).into()
+        }),
+        map(tag("D"), |_| {
+            EditKind::Remove(SelectionKind::LineRemain.once()).into()
         }),
     ))(input)
 }
