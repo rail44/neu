@@ -27,7 +27,9 @@ fn remove(input: &str) -> IResult<&str, ActionKind> {
 
 fn yank(input: &str) -> IResult<&str, ActionKind> {
     alt((
-        map(alt((tag("yy"), tag("Y"))), |_| ActionKind::Yank(SelectionKind::Line.once())),
+        map(alt((tag("yy"), tag("Y"))), |_| {
+            ActionKind::Yank(SelectionKind::Line.once())
+        }),
         map(pair(tag("y"), selection::parse), |(_, s)| {
             ActionKind::Yank(s)
         }),
@@ -36,6 +38,8 @@ fn yank(input: &str) -> IResult<&str, ActionKind> {
 
 fn action_kind(input: &str) -> IResult<&str, ActionKind> {
     alt((
+        map(tag("<C-f>"), |_| MovementKind::ScollScreenDown.into()),
+        map(tag("<C-b>"), |_| MovementKind::ScollScreenUp.into()),
         map(tag("x"), |_| EditKind::RemoveChar.into()),
         map(tag("i"), |_| ActionKind::IntoInsertMode),
         map(tag("a"), |_| ActionKind::IntoAppendMode),

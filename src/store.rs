@@ -114,6 +114,20 @@ impl Store {
             MoveToTail => {
                 state.cursor.row = state.buffer.count_lines() - 1;
             }
+            ScollScreenUp => {
+                let textarea_row = (state.size.1 - 2) as usize;
+                state.row_offset = state.row_offset.saturating_sub(textarea_row);
+                state.cursor.row = state.row_offset + textarea_row;
+            }
+            ScollScreenDown => {
+                let textarea_row = (state.size.1 - 2) as usize;
+                state.row_offset += textarea_row;
+                state.row_offset = min(
+                    state.buffer.count_lines().saturating_sub(1),
+                    state.row_offset,
+                );
+                state.cursor.row = state.row_offset;
+            }
         }
     }
 
