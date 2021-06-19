@@ -57,6 +57,7 @@ pub(crate) enum MovementKind {
     ScollScreenUp,
     ScollScreenDown,
     MoveToLineTail,
+    MoveToLineIndentHead,
 }
 
 impl MovementKind {

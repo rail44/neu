@@ -138,6 +138,20 @@ impl Buffer {
         (start, end)
     }
 
+    pub(crate) fn current_line_indent_head(&self, row: usize) -> usize {
+        let start = self.0.line_to_char(row);
+        let mut chars = self.0.chars_at(start);
+
+        let mut i = 0;
+        while let Some(c) = chars.next() {
+            if !c.is_ascii_whitespace() {
+                break;
+            }
+            i += 1;
+        }
+        start + i
+    }
+
     pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> String {
         let start = self.get_offset_by_cursor(col, row);
         let end = start + count;
