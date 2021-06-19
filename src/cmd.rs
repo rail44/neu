@@ -40,6 +40,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("<C-f>"), |_| MovementKind::ScollScreenDown.into()),
         map(tag("<C-b>"), |_| MovementKind::ScollScreenUp.into()),
+        map(tag("$"), |_| MovementKind::MoveToLineTail.into()),
         map(tag("x"), |_| EditKind::RemoveChar.into()),
         map(tag("i"), |_| ActionKind::IntoInsertMode),
         map(tag("a"), |_| ActionKind::IntoAppendMode),

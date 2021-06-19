@@ -128,6 +128,12 @@ impl Store {
                 );
                 state.cursor.row = state.row_offset;
             }
+            MoveToLineTail => {
+                self.movement(
+                    MovementKind::MoveTo(self.state.current_line().1.saturating_sub(1)),
+                    count,
+                );
+            }
         }
     }
 
