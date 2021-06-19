@@ -120,9 +120,9 @@ impl Store {
                 );
                 self.movement(MovementKind::CursorLeft, word_offset * count);
             }
-            MoveToHead => {
+            MoveLine => {
                 self.state.cursor.row = 0;
-                self.state.row_offset = 0;
+                self.state.row_offset = count - 1;
             }
             MoveToTail => {
                 self.state.cursor.row = self.state.buffer.count_lines();

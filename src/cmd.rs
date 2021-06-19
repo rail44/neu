@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, digit0},
+    character::complete::{anychar, digit0, digit1},
     combinator::map,
     multi::many_till,
     sequence::pair,
@@ -40,7 +40,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
         map(tag("p"), |_| EditKind::AppendYank.into()),
         map(tag("P"), |_| EditKind::InsertYank.into()),
         map(tag("."), |_| ActionKind::Repeat),
-        map(tag("gg"), |_| MovementKind::MoveToHead.into()),
+        map(tag("gg"), |_| MovementKind::MoveLine.into()),
         map(tag("G"), |_| MovementKind::MoveToTail.into()),
         map(alt((tag("h"), tag("<Left>"))), |_| {
             MovementKind::CursorLeft.into()

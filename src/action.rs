@@ -51,7 +51,7 @@ pub(crate) enum MovementKind {
     ForwardWord,
     BackWord,
     MoveTo(usize),
-    MoveToHead,
+    MoveLine,
     MoveToTail,
 }
 
