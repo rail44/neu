@@ -51,6 +51,8 @@ pub(crate) enum MovementKind {
     ForwardWord,
     BackWord,
     MoveTo(usize),
+    MoveToHead,
+    MoveToTail,
 }
 
 impl MovementKind {

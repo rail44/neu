@@ -197,7 +197,13 @@ pub(crate) struct CurrentLine(pub(crate) String);
 impl Compute for CurrentLine {
     type Source = (Buffer, CursorRow, RowOffset);
     fn compute(source: &Self::Source) -> Self {
-        Self(source.0.line(source.1 .0 + source.2 .0).as_str().to_string())
+        Self(
+            source
+                .0
+                .line(source.1 .0 + source.2 .0)
+                .as_str()
+                .to_string(),
+        )
     }
 }
 
