@@ -27,7 +27,7 @@ fn remove(input: &str) -> IResult<&str, ActionKind> {
 
 fn yank(input: &str) -> IResult<&str, ActionKind> {
     alt((
-        map(tag("yy"), |_| ActionKind::Yank(SelectionKind::Line.once())),
+        map(alt((tag("yy"), tag("Y"))), |_| ActionKind::Yank(SelectionKind::Line.once())),
         map(pair(tag("y"), selection::parse), |(_, s)| {
             ActionKind::Yank(s)
         }),
