@@ -14,6 +14,7 @@ mod cmdline;
 mod compute;
 mod config;
 mod editor;
+mod highlight;
 mod mode;
 mod renderer;
 mod selection;
