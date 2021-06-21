@@ -258,3 +258,19 @@ impl Compute for LineRange {
         Self(row_offset, min(line_count, textarea_row + row_offset + 1))
     }
 }
+
+#[derive(Clone, Debug)]
+pub(crate) struct Highlight(pub(crate) Vec<crate::highlight::HighlightEvent>);
+
+impl PartialEq for Highlight {
+    fn eq(&self, _: &Self) -> bool {
+        false
+    }
+}
+
+impl Compute for Highlight {
+    type Source = Buffer;
+    fn compute(source: &Self::Source) -> Self {
+        Self(crate::highlight::highlight(&source.as_str()))
+    }
+}
