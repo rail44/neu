@@ -23,6 +23,10 @@ termion = "1.5.6"
 toml = "0.5.8"
 tracing = { git = "https://github.com/tokio-rs/tracing", features = ["release_max_level_warn"] }
 tracing-subscriber = { git = "https://github.com/tokio-rs/tracing" }
-tree-sitter = "0.19.5"
+tree-sitter = { git = "https://github.com/tree-sitter/tree-sitter" }
 tree-sitter-rust = "0.19.0"
+tree-sitter-highlight = { git = "https://github.com/tree-sitter/tree-sitter" }
 unicode-width = "0.1.8"
+
+[patch.crates-io]
+tree-sitter = { git = "https://github.com/tree-sitter/tree-sitter" }
