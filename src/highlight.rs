@@ -1,15 +1,20 @@
-#[test]
-fn test_highlighter() {
-    use tree_sitter_rust;
-    use tree_sitter_highlight;
-    use tree_sitter_highlight::{Highlighter, HighlightConfiguration};
+use once_cell::sync::Lazy;
+use std::sync::Mutex;
+use tree_sitter_highlight;
+pub use tree_sitter_highlight::HighlightEvent;
+use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
+use tree_sitter_rust;
 
+static HIGHLIGHTER: Lazy<Mutex<Highlighter>> = Lazy::new(|| Mutex::new(Highlighter::new()));
+
+pub(crate) fn highlight(source: &str) -> Vec<HighlightEvent> {
     let mut rust_config = HighlightConfiguration::new(
         tree_sitter_rust::language(),
         tree_sitter_rust::HIGHLIGHT_QUERY,
         "",
         "",
-    ).unwrap();
+    )
+    .unwrap();
     let highlight_names = &[
         "annotation",
         "attribute",
@@ -71,29 +76,12 @@ fn test_highlighter() {
         "variable",
         "variable.builtin",
     ];
-    let mut highlighter = Highlighter::new();
     rust_config.configure(highlight_names);
-    use tree_sitter_highlight::HighlightEvent;
 
-    let highlights = highlighter.highlight(
-        &rust_config,
-        b"'e',",
-        None,
-        |_| None
-    ).unwrap();
-
-    for event in highlights {
-        match event.unwrap() {
-            HighlightEvent::Source {start, end} => {
-                eprintln!("source: {}-{}", start, end);
-            },
-            HighlightEvent::HighlightStart(s) => {
-                eprintln!("highlight style started: {:?}", s);
-            },
-            HighlightEvent::HighlightEnd => {
-                eprintln!("highlight style ended");
-            },
-        }
-    }
+    let mut highlighter = HIGHLIGHTER.lock().unwrap();
+    highlighter
+        .highlight(&rust_config, source.as_bytes(), None, |_| None)
+        .unwrap()
+        .map(|r| r.unwrap().clone())
+        .collect()
 }
-

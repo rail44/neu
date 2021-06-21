@@ -101,6 +101,9 @@ impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
 
+        let highlight = self.reactor.compute::<crate::compute::Highlight>();
+        tracing::debug!("{:?}", highlight);
+
         self.reactor.load_state(state.clone());
 
         let props = self.reactor.compute();
@@ -119,7 +122,6 @@ impl Renderer {
     }
 
     fn render_text_area(&mut self, props: TextAreaProps) {
-        tracing::debug!("{:?}", props);
         let max_line_digit = props.max_line_digit;
         for (i, line) in props
             .buffer
