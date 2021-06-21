@@ -136,7 +136,11 @@ impl Store {
             }
             MoveToLineIndentHead => {
                 self.movement(
-                        MovementKind::MoveTo(self.state.buffer.current_line_indent_head(self.state.cursor.row)),
+                    MovementKind::MoveTo(
+                        self.state
+                            .buffer
+                            .current_line_indent_head(self.state.cursor.row),
+                    ),
                     count,
                 );
             }

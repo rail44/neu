@@ -38,26 +38,20 @@ fn yank(input: &str) -> IResult<&str, ActionKind> {
 
 fn movement_kind(input: &str) -> IResult<&str, MovementKind> {
     alt((
-        map(tag("<C-f>"), |_| MovementKind::ScollScreenDown.into()),
-        map(tag("<C-b>"), |_| MovementKind::ScollScreenUp.into()),
-        map(tag("^"), |_| MovementKind::MoveToLineIndentHead.into()),
-        map(tag("$"), |_| MovementKind::MoveToLineTail.into()),
-        map(tag("gg"), |_| MovementKind::MoveLine.into()),
-        map(tag("G"), |_| MovementKind::MoveToTail.into()),
-        map(alt((tag("h"), tag("<Left>"))), |_| {
-            MovementKind::CursorLeft.into()
-        }),
-        map(alt((tag("j"), tag("<Down>"))), |_| {
-            MovementKind::CursorDown.into()
-        }),
-        map(alt((tag("k"), tag("<Up>"))), |_| {
-            MovementKind::CursorUp.into()
-        }),
+        map(tag("<C-f>"), |_| MovementKind::ScollScreenDown),
+        map(tag("<C-b>"), |_| MovementKind::ScollScreenUp),
+        map(tag("^"), |_| MovementKind::MoveToLineIndentHead),
+        map(tag("$"), |_| MovementKind::MoveToLineTail),
+        map(tag("gg"), |_| MovementKind::MoveLine),
+        map(tag("G"), |_| MovementKind::MoveToTail),
+        map(alt((tag("h"), tag("<Left>"))), |_| MovementKind::CursorLeft),
+        map(alt((tag("j"), tag("<Down>"))), |_| MovementKind::CursorDown),
+        map(alt((tag("k"), tag("<Up>"))), |_| MovementKind::CursorUp),
         map(alt((tag("l"), tag("<Right>"))), |_| {
-            MovementKind::CursorRight.into()
+            MovementKind::CursorRight
         }),
-        map(tag("w"), |_| MovementKind::ForwardWord.into()),
-        map(tag("b"), |_| MovementKind::BackWord.into()),
+        map(tag("w"), |_| MovementKind::ForwardWord),
+        map(tag("b"), |_| MovementKind::BackWord),
     ))(input)
 }
 

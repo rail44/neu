@@ -140,10 +140,10 @@ impl Buffer {
 
     pub(crate) fn current_line_indent_head(&self, row: usize) -> usize {
         let start = self.0.line_to_char(row);
-        let mut chars = self.0.chars_at(start);
+        let chars = self.0.chars_at(start);
 
         let mut i = 0;
-        while let Some(c) = chars.next() {
+        for c in chars {
             if !c.is_ascii_whitespace() {
                 break;
             }
