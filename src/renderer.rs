@@ -163,8 +163,7 @@ impl Renderer {
             Point::new(props.line_range.0, 0),
             Point::new(props.line_range.1, 0),
         );
-        let source = "";
-        let matches = c.captures(&QUERY, syntax_tree.clone(), |_| source.as_bytes());
+        let matches = c.captures(&QUERY, *syntax_tree, |_| &[]);
         for matched in matches {
             tracing::debug!("{:?}", matched.0.captures);
             for capture in matched.0.captures {
