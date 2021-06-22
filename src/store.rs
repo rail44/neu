@@ -72,16 +72,8 @@ impl Store {
     fn notify(&mut self) {
         self.highlighter.load_buffer(&self.state.buffer);
         self.scroll();
-        self.renderer.render(
-            &self.state,
-            &self
-                .highlighter
-                .tree()
-                .unwrap()
-                .root_node()
-                .child(0)
-                .unwrap(),
-        );
+        self.renderer
+            .render(&self.state, &self.highlighter.tree().unwrap().root_node());
     }
 
     fn movement(&mut self, movement: MovementKind, count: usize) {
