@@ -9,7 +9,7 @@ use core::cmp::{max, min};
 use flume::Receiver;
 use std::fs::File;
 use std::io::{BufWriter, Write};
-use tree_sitter::{Point, InputEdit};
+use tree_sitter::{InputEdit, Point};
 
 pub(crate) struct Store {
     state: State,
@@ -172,9 +172,7 @@ impl Store {
             new_end_position: Point::new(row, col + l),
         };
         self.highlighter.edit_tree(&edit);
-        self.state
-            .buffer
-            .insert(col, self.state.cursor.row, s);
+        self.state.buffer.insert(col, self.state.cursor.row, s);
     }
 
     fn remove(&mut self, from: usize, count: usize) -> String {
@@ -199,7 +197,10 @@ impl Store {
         match edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
-                let start = self.state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
+                let start = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(cursor.col, cursor.row);
                 let yank = self.remove(start, count);
                 self.action(ActionKind::SetYank(yank).once());
             }
@@ -218,7 +219,10 @@ impl Store {
                     self.state.cursor.col
                 };
 
-                let to = self.state.buffer.get_offset_by_cursor(col, self.state.cursor.row);
+                let to = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(col, self.state.cursor.row);
 
                 let s = self.state.yanked.clone();
                 for _ in 0..count {
@@ -232,20 +236,29 @@ impl Store {
                     self.state.cursor.col
                 };
 
-                let to = self.state.buffer.get_offset_by_cursor(col, self.state.cursor.row);
+                let to = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(col, self.state.cursor.row);
                 let s = self.state.yanked.clone();
                 for _ in 0..count {
                     self.insert(to, &s);
                 }
             }
             LineBreak => {
-                let to = self.state.buffer.get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                let to = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
                 self.insert(to, "\n");
                 self.movement(MovementKind::CursorDown, 1);
                 self.movement(MovementKind::CursorLineHead, 1);
             }
             InsertChar(c) => {
-                let to = self.state.buffer.get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                let to = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
                 self.insert(to, &c.to_string());
                 self.movement(MovementKind::CursorRight, 1);
             }
