@@ -160,32 +160,52 @@ impl Store {
         }
     }
 
+    fn insert(&mut self, to: usize, s: &str) {
+        let (row, col) = self.state.buffer.get_cursor_by_offset(to);
+        let l = s.len();
+        let edit = InputEdit {
+            start_byte: to,
+            old_end_byte: to,
+            new_end_byte: to + l,
+            start_position: Point::new(row, col),
+            old_end_position: Point::new(row, col),
+            new_end_position: Point::new(row, col + l),
+        };
+        self.highlighter.edit_tree(&edit);
+        self.state
+            .buffer
+            .insert(col, self.state.cursor.row, s);
+    }
+
+    fn remove(&mut self, from: usize, count: usize) -> String {
+        let (start_row, start_col) = self.state.buffer.get_cursor_by_offset(from);
+        let (end_row, end_col) = self.state.buffer.get_cursor_by_offset(from);
+        let to = from + count;
+        let edit = InputEdit {
+            start_byte: from,
+            old_end_byte: from,
+            new_end_byte: from,
+            start_position: Point::new(start_row, start_col),
+            old_end_position: Point::new(end_row, end_col),
+            new_end_position: Point::new(start_row, start_col),
+        };
+        self.highlighter.edit_tree(&edit);
+        self.state.buffer.remove(from..to)
+    }
+
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
         self.state.prev_edit = Some((edit.clone(), count));
         match edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
-                let yank = self.state.buffer.remove_chars(
-                    cursor.col,
-                    cursor.row,
-                    count,
-                );
                 let start = self.state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
-                let edit = InputEdit {
-                    start_byte: start,
-                    old_end_byte: start + count,
-                    new_end_byte: start,
-                    start_position: Point::new(cursor.row, cursor.col),
-                    old_end_position: Point::new(cursor.row, cursor.col + count),
-                    new_end_position: Point::new(cursor.row, cursor.col),
-                };
-                self.highlighter.edit_tree(&edit);
+                let yank = self.remove(start, count);
                 self.action(ActionKind::SetYank(yank).once());
             }
             Remove(selection) => {
                 let (from, to) = self.state.measure_selection(selection);
-                let yank = self.state.buffer.remove(from..to);
+                let yank = self.remove(from, to - from);
                 self.action(ActionKind::SetYank(yank).once());
                 self.movement(MovementKind::MoveTo(from), 1);
             }
@@ -197,10 +217,12 @@ impl Store {
                     self.movement(MovementKind::CursorRight, 1);
                     self.state.cursor.col
                 };
+
+                let to = self.state.buffer.get_offset_by_cursor(col, self.state.cursor.row);
+
+                let s = self.state.yanked.clone();
                 for _ in 0..count {
-                    self.state
-                        .buffer
-                        .insert(col, self.state.cursor.row, &self.state.yanked);
+                    self.insert(to, &s);
                 }
             }
             InsertYank => {
@@ -209,23 +231,22 @@ impl Store {
                 } else {
                     self.state.cursor.col
                 };
+
+                let to = self.state.buffer.get_offset_by_cursor(col, self.state.cursor.row);
+                let s = self.state.yanked.clone();
                 for _ in 0..count {
-                    self.state
-                        .buffer
-                        .insert(col, self.state.cursor.row, &self.state.yanked);
+                    self.insert(to, &s);
                 }
             }
             LineBreak => {
-                self.state
-                    .buffer
-                    .insert_char(self.state.cursor.col, self.state.cursor.row, '\n');
+                let to = self.state.buffer.get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                self.insert(to, "\n");
                 self.movement(MovementKind::CursorDown, 1);
                 self.movement(MovementKind::CursorLineHead, 1);
             }
             InsertChar(c) => {
-                self.state
-                    .buffer
-                    .insert_char(self.state.cursor.col, self.state.cursor.row, c);
+                let to = self.state.buffer.get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                self.insert(to, &c.to_string());
                 self.movement(MovementKind::CursorRight, 1);
             }
         }

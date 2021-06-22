@@ -30,7 +30,7 @@ impl Highlighter {
                     }
                     Vec::new()
                 },
-                None,
+                self.tree.as_ref(),
             )
             .unwrap();
         self.tree = Some(tree);
