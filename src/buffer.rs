@@ -185,6 +185,10 @@ impl Buffer {
         let row_offset = self.0.line_to_char(row);
         (row, offset - row_offset)
     }
+
+    pub(crate) fn get_byte(&self, i: usize) -> Option<u8> {
+        self.0.get_byte(i)
+    }
 }
 
 impl From<&str> for Buffer {

@@ -101,9 +101,6 @@ impl Renderer {
     pub(crate) fn render(&mut self, state: &State) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
 
-        let highlight = self.reactor.compute::<crate::compute::Highlight>();
-        tracing::debug!("{:?}", highlight);
-
         self.reactor.load_state(state.clone());
 
         let props = self.reactor.compute();
