@@ -181,7 +181,7 @@ impl Store {
         let to = from + count;
         let edit = InputEdit {
             start_byte: from,
-            old_end_byte: from,
+            old_end_byte: to,
             new_end_byte: from,
             start_position: Point::new(start_row, start_col),
             old_end_position: Point::new(end_row, end_col),
