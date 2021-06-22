@@ -566,6 +566,7 @@ dependencies = [
  "flume",
  "hashbrown 0.11.2",
  "nom",
+ "once_cell",
  "ropey",
  "serde",
  "serde_derive",

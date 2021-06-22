@@ -9,6 +9,29 @@ use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use tree_sitter::{Node, Point};
 use unicode_width::UnicodeWidthStr;
+use once_cell::sync::Lazy;
+
+static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
+    tree_sitter::Query::new(
+        tree_sitter_rust::language(),
+        tree_sitter_rust::HIGHLIGHT_QUERY,
+        )
+        .unwrap()
+});
+
+fn get_color(syntax_kind: &str) -> String {
+    use termion::color;
+    match syntax_kind {
+        "keyword" => format!("{}", color::Fg(color::Magenta)),
+        "property" => format!("{}", color::Fg(color::Red)),
+        "function.method" => format!("{}", color::Fg(color::Blue)),
+        "type" => format!("{}", color::Fg(color::Yellow)),
+        s => {
+            tracing::debug!("{}", s);
+            format!("{}", color::Fg(color::Red))
+        },
+    }
+}
 
 #[derive(PartialEq, Clone, Debug)]
 struct TextAreaProps {
@@ -120,19 +143,85 @@ impl Renderer {
 
     fn render_text_area(&mut self, props: TextAreaProps, syntax_tree: &Node) {
         let max_line_digit = props.max_line_digit;
+        let ranged_tree = syntax_tree
+            .named_descendant_for_point_range(
+                Point::new(props.line_range.0, 0),
+                Point::new(props.line_range.1 - 1, 0),
+            )
+            .unwrap();
+        let mut c = tree_sitter::QueryCursor::new();
+        let source = "";
+        let mut captures = c.captures(&QUERY, ranged_tree, |_| source.as_bytes());
+        let mut captured = captures.next().unwrap().0.captures[0];
         for (i, line) in props
             .buffer
             .lines_at(props.line_range.0)
             .take(props.line_range.1 - props.line_range.0)
             .enumerate()
         {
+            let row = props.line_range.0 + i;
+            while captured.node.start_position().row < row {
+                let next = captures.next();
+                if next.is_none() {
+                    break;
+                }
+                captured = next.unwrap().0.captures[0];
+            }
+
             write!(
                 self.stdout,
                 "{}",
                 termion::cursor::Goto(max_line_digit as u16 + 2, (i + 1) as u16),
             )
             .unwrap();
-            write!(self.stdout, "{}", line.as_str(),).unwrap();
+
+            let mut col = 0;
+            'outer: while captured.node.start_position().row == row {
+                while captured.node.start_position().column < col {
+                    let next = captures.next();
+                    if next.is_none() {
+                        break 'outer;
+                    }
+                    captured = next.unwrap().0.captures[0];
+                    if captured.node.start_position().row != row {
+                        break 'outer;
+                    }
+                }
+                let start = captured.node.start_position().column;
+                let end = captured.node.end_position().column;
+
+                if captured.node.start_position().column > col {
+                    write!(
+                        self.stdout,
+                        "{}",
+                        line.slice(col..start).as_str()
+                    ).unwrap();
+                }
+
+                let syntax_kind = &(*QUERY).capture_names()[captured.index as usize];
+                write!(
+                    self.stdout,
+                    "{}{}{}",
+                    get_color(syntax_kind),
+                    line.slice(start..end).as_str(),
+                    termion::color::Fg(termion::color::Reset),
+                )
+                .unwrap();
+
+                col = end;
+
+                let next = captures.next();
+                if next.is_none() {
+                    break;
+                }
+                captured = next.unwrap().0.captures[0];
+            }
+
+            write!(
+                self.stdout,
+                "{}",
+                line.slice(col..).as_str()
+            ).unwrap();
         }
     }
 
