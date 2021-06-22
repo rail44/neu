@@ -1,5 +1,5 @@
 use crate::buffer::Buffer;
-use tree_sitter::{InputEdit, Parser, Point, Tree};
+use tree_sitter::{InputEdit, Parser, Tree};
 
 pub(crate) struct Highlighter {
     parser: Parser,

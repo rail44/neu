@@ -5,18 +5,18 @@ use crate::compute::{
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
+use once_cell::sync::Lazy;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use tree_sitter::{Node, Point};
 use unicode_width::UnicodeWidthStr;
-use once_cell::sync::Lazy;
 
 static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
     tree_sitter::Query::new(
         tree_sitter_rust::language(),
         tree_sitter_rust::HIGHLIGHT_QUERY,
-        )
-        .unwrap()
+    )
+    .unwrap()
 });
 
 fn get_color(syntax_kind: &str) -> String {
@@ -29,7 +29,7 @@ fn get_color(syntax_kind: &str) -> String {
         s => {
             tracing::debug!("{}", s);
             format!("{}", color::Fg(color::Red))
-        },
+        }
     }
 }
 
@@ -191,11 +191,7 @@ impl Renderer {
                 let end = captured.node.end_position().column;
 
                 if captured.node.start_position().column > col {
-                    write!(
-                        self.stdout,
-                        "{}",
-                        line.slice(col..start).as_str()
-                    ).unwrap();
+                    write!(self.stdout, "{}", line.slice(col..start).as_str()).unwrap();
                 }
 
                 let syntax_kind = &(*QUERY).capture_names()[captured.index as usize];
@@ -217,11 +213,7 @@ impl Renderer {
                 captured = next.unwrap().0.captures[0];
             }
 
-            write!(
-                self.stdout,
-                "{}",
-                line.slice(col..).as_str()
-            ).unwrap();
+            write!(self.stdout, "{}", line.slice(col..).as_str()).unwrap();
         }
     }
 
