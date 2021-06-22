@@ -1,87 +1,51 @@
-use once_cell::sync::Lazy;
-use std::sync::Mutex;
-use tree_sitter_highlight;
-pub use tree_sitter_highlight::HighlightEvent;
-use tree_sitter_highlight::{HighlightConfiguration, Highlighter};
+use crate::buffer::Buffer;
+use tree_sitter::{Parser, Point, Tree, InputEdit};
 use tree_sitter_rust;
 
-static HIGHLIGHTER: Lazy<Mutex<Highlighter>> = Lazy::new(|| Mutex::new(Highlighter::new()));
+pub(crate) struct Highlighter {
+    parser: Parser,
+    tree: Option<Tree>,
+}
 
-pub(crate) fn highlight(source: &str) -> Vec<HighlightEvent> {
-    let mut rust_config = HighlightConfiguration::new(
-        tree_sitter_rust::language(),
-        tree_sitter_rust::HIGHLIGHT_QUERY,
-        "",
-        "",
-    )
-    .unwrap();
-    let highlight_names = &[
-        "annotation",
-        "attribute",
-        "boolean",
-        "character",
-        "comment",
-        "conditional",
-        "constant",
-        "constant.builtin",
-        "constant.macro",
-        "constructor",
-        "error",
-        "exception",
-        "field",
-        "float",
-        "function",
-        "function.builtin",
-        "function.macro",
-        "include",
-        "keyword",
-        "keyword.function",
-        "keyword.operator",
-        "label",
-        "method",
-        "namespace",
-        "none",
-        "number",
-        "operator",
-        "parameter",
-        "parameter.reference",
-        "property",
-        "punctuation.delimiter",
-        "punctuation.bracket",
-        "punctuation.special",
-        "repeat",
-        "string",
-        "string.regex",
-        "string.escape",
-        "symbol",
-        "tag",
-        "tag.delimiter",
-        "text",
-        "text.strong",
-        "text.emphasis",
-        "text.underline",
-        "text.strike",
-        "text.title",
-        "text.literal",
-        "text.uri",
-        "text.math",
-        "text.reference",
-        "text.environment",
-        "text.environment.name",
-        "text.note",
-        "text.warning",
-        "text.danger",
-        "type",
-        "type.builtin",
-        "variable",
-        "variable.builtin",
-    ];
-    rust_config.configure(highlight_names);
+impl Highlighter {
+    pub(crate) fn new() -> Self {
+        let parser = Parser::new();
+        let mut h = Self { parser, tree: None };
+        h.set_rust_language();
+        h
+    }
 
-    let mut highlighter = HIGHLIGHTER.lock().unwrap();
-    highlighter
-        .highlight(&rust_config, source.as_bytes(), None, |_| None)
-        .unwrap()
-        .map(|r| r.unwrap().clone())
-        .collect()
+    pub(crate) fn set_rust_language(&mut self) {
+        let language = tree_sitter_rust::language();
+        self.parser.set_language(language).unwrap();
+    }
+
+    pub(crate) fn load_buffer(&mut self, b: &Buffer) {
+        let tree = self
+            .parser
+            .parse_with(
+                &mut |byte: usize, _position: Point| {
+                    if let Some(b) = b.get_byte(byte as usize) {
+                        return vec![b];
+                    }
+                    Vec::new()
+                },
+                None,
+            )
+            .unwrap();
+        self.tree = Some(tree);
+    }
+
+    pub(crate) fn tree(&self) -> Option<&Tree> {
+        self.tree.as_ref()
+    }
+
+    pub(crate) fn edit_tree(&mut self, input: &InputEdit) {
+        if self.tree.is_none() {
+            return;
+        }
+
+        let tree = self.tree.as_mut().unwrap();
+        tree.edit(&input);
+    }
 }

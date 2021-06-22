@@ -1,5 +1,6 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::buffer::Buffer;
+use crate::highlight::Highlighter;
 use crate::mode::Mode;
 use crate::renderer::Renderer;
 use crate::state::State;
@@ -8,18 +9,24 @@ use core::cmp::{max, min};
 use flume::Receiver;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use tree_sitter::{Point, InputEdit};
 
 pub(crate) struct Store {
     state: State,
     renderer: Renderer,
+    highlighter: Highlighter,
     rx: Receiver<Action>,
 }
 
 impl Store {
     pub(crate) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
+        let mut highlighter = Highlighter::new();
+        highlighter.set_rust_language();
+
         let mut store = Self {
             rx,
             renderer,
+            highlighter,
             state: State::new(),
         };
         store.notify();
@@ -27,9 +34,13 @@ impl Store {
     }
 
     pub(crate) fn with_buffer(rx: Receiver<Action>, renderer: Renderer, buffer: Buffer) -> Self {
+        let mut highlighter = Highlighter::new();
+        highlighter.set_rust_language();
+
         let mut store = Self {
             rx,
             renderer,
+            highlighter,
             state: State::with_buffer(buffer),
         };
         store.notify();
@@ -59,6 +70,8 @@ impl Store {
     }
 
     fn notify(&mut self) {
+        self.highlighter.load_buffer(&self.state.buffer);
+        // tracing::debug!("{}", self.highlighter.tree().unwrap().root_node().to_sexp());
         self.scroll();
         self.renderer.render(&self.state);
     }
@@ -152,11 +165,22 @@ impl Store {
         self.state.prev_edit = Some((edit.clone(), count));
         match edit {
             RemoveChar => {
+                let cursor = &self.state.cursor;
                 let yank = self.state.buffer.remove_chars(
-                    self.state.cursor.col,
-                    self.state.cursor.row,
+                    cursor.col,
+                    cursor.row,
                     count,
                 );
+                let start = self.state.buffer.get_offset_by_cursor(cursor.col, cursor.row);
+                let edit = InputEdit {
+                    start_byte: start,
+                    old_end_byte: start + count,
+                    new_end_byte: start,
+                    start_position: Point::new(cursor.row, cursor.col),
+                    old_end_position: Point::new(cursor.row, cursor.col + count),
+                    new_end_position: Point::new(cursor.row, cursor.col),
+                };
+                self.highlighter.edit_tree(&edit);
                 self.action(ActionKind::SetYank(yank).once());
             }
             Remove(selection) => {
