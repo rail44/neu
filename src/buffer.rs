@@ -152,15 +152,6 @@ impl Buffer {
         start + i
     }
 
-    pub(crate) fn remove_chars(&mut self, col: usize, row: usize, count: usize) -> String {
-        let start = self.get_offset_by_cursor(col, row);
-        let end = start + count;
-        let range = start..end;
-        let seq = self.0.slice(range.clone()).into();
-        self.0.remove(range);
-        seq
-    }
-
     pub(crate) fn remove<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> String {
         let seq = self.0.slice(range.clone()).into();
         self.0.remove(range);
@@ -169,11 +160,6 @@ impl Buffer {
 
     pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
         self.0.slice(range).into()
-    }
-
-    pub(crate) fn insert_char(&mut self, col: usize, row: usize, c: char) {
-        let start = self.get_offset_by_cursor(col, row);
-        self.0.insert_char(start, c);
     }
 
     pub(crate) fn as_str(&self) -> Cow<str> {
@@ -186,8 +172,8 @@ impl Buffer {
         (row, offset - row_offset)
     }
 
-    pub(crate) fn get_byte(&self, i: usize) -> Option<u8> {
-        self.0.get_byte(i)
+    pub(crate) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
+        self.0.get_chunk_at_byte(i)
     }
 }
 
