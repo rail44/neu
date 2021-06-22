@@ -143,77 +143,53 @@ impl Renderer {
 
     fn render_text_area(&mut self, props: TextAreaProps, syntax_tree: &Node) {
         let max_line_digit = props.max_line_digit;
-        let ranged_tree = syntax_tree
-            .named_descendant_for_point_range(
-                Point::new(props.line_range.0, 0),
-                Point::new(props.line_range.1 - 1, 0),
-            )
-            .unwrap();
-        let mut c = tree_sitter::QueryCursor::new();
-        let source = "";
-        let mut captures = c.captures(&QUERY, ranged_tree, |_| source.as_bytes());
-        let mut captured = captures.next().unwrap().0.captures[0];
         for (i, line) in props
             .buffer
             .lines_at(props.line_range.0)
             .take(props.line_range.1 - props.line_range.0)
             .enumerate()
         {
-            let row = props.line_range.0 + i;
-            while captured.node.start_position().row < row {
-                let next = captures.next();
-                if next.is_none() {
-                    break;
-                }
-                captured = next.unwrap().0.captures[0];
-            }
-
             write!(
                 self.stdout,
                 "{}",
                 termion::cursor::Goto(max_line_digit as u16 + 2, (i + 1) as u16),
             )
             .unwrap();
+            write!(self.stdout, "{}", line.as_str()).unwrap();
+        }
 
-            let mut col = 0;
-            'outer: while captured.node.start_position().row == row {
-                while captured.node.start_position().column < col {
-                    let next = captures.next();
-                    if next.is_none() {
-                        break 'outer;
-                    }
-                    captured = next.unwrap().0.captures[0];
-                    if captured.node.start_position().row != row {
-                        break 'outer;
-                    }
-                }
-                let start = captured.node.start_position().column;
-                let end = captured.node.end_position().column;
-
-                if captured.node.start_position().column > col {
-                    write!(self.stdout, "{}", line.slice(col..start).as_str()).unwrap();
-                }
-
-                let syntax_kind = &(*QUERY).capture_names()[captured.index as usize];
+        let mut c = tree_sitter::QueryCursor::new();
+        c.set_point_range(
+            Point::new(props.line_range.0, 0),
+            Point::new(props.line_range.1, 0),
+        );
+        let source = "";
+        let matches = c.captures(&QUERY, syntax_tree.clone(), |_| source.as_bytes());
+        for matched in matches {
+            tracing::debug!("{:?}", matched.0.captures);
+            for capture in matched.0.captures {
+                let start = capture.node.start_byte();
+                let end = capture.node.end_byte();
+                let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
+                let position = capture.node.start_position();
+                write!(
+                    self.stdout,
+                    "{}",
+                    termion::cursor::Goto(
+                        max_line_digit as u16 + 2 + position.column as u16,
+                        position.row as u16 - props.line_range.0 as u16 + 1
+                    ),
+                )
+                .unwrap();
                 write!(
                     self.stdout,
                     "{}{}{}",
                     get_color(syntax_kind),
-                    line.slice(start..end).as_str(),
+                    props.buffer.slice(start..end).as_str(),
                     termion::color::Fg(termion::color::Reset),
                 )
                 .unwrap();
-
-                col = end;
-
-                let next = captures.next();
-                if next.is_none() {
-                    break;
-                }
-                captured = next.unwrap().0.captures[0];
             }
-
-            write!(self.stdout, "{}", line.slice(col..).as_str()).unwrap();
         }
     }
 
