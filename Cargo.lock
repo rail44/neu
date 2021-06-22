@@ -994,7 +994,7 @@ dependencies = [
 [[package]]
 name = "tracing"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "cfg-if",
  "pin-project-lite",
@@ -1005,7 +1005,7 @@ dependencies = [
 [[package]]
 name = "tracing-attributes"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1015,7 +1015,7 @@ dependencies = [
 [[package]]
 name = "tracing-core"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "lazy_static",
 ]
@@ -1023,7 +1023,7 @@ dependencies = [
 [[package]]
 name = "tracing-log"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "lazy_static",
  "log",
@@ -1033,7 +1033,7 @@ dependencies = [
 [[package]]
 name = "tracing-serde"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "serde",
  "tracing-core",
@@ -1042,7 +1042,7 @@ dependencies = [
 [[package]]
 name = "tracing-subscriber"
 version = "0.3.0"
-source = "git+https://github.com/tokio-rs/tracing#3ddf54f44b73208e2e5caff7d3f72e8516d0eb08"
+source = "git+https://github.com/tokio-rs/tracing#13e398d0853912ec2c671c6785f3024a7d014835"
 dependencies = [
  "ansi_term",
  "chrono",
