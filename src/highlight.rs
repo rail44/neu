@@ -23,11 +23,11 @@ impl Highlighter {
         let tree = self
             .parser
             .parse_with(
-                &mut |byte: usize, _position: Point| {
-                    if let Some(b) = b.get_byte(byte as usize) {
-                        return vec![b];
+                &mut |byte, _| {
+                    if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
+                        return s[byte - i..].as_bytes();
                     }
-                    Vec::new()
+                    &[]
                 },
                 self.tree.as_ref(),
             )

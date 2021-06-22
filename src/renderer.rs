@@ -7,6 +7,7 @@ use crate::state::{Cursor, State};
 use core::cmp::max;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
+use tree_sitter::{Node, Point};
 use unicode_width::UnicodeWidthStr;
 
 #[derive(PartialEq, Clone, Debug)]
@@ -98,13 +99,12 @@ impl Renderer {
 }
 
 impl Renderer {
-    pub(crate) fn render(&mut self, state: &State) {
+    pub(crate) fn render(&mut self, state: &State, syntax_tree: &Node) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-
         self.reactor.load_state(state.clone());
 
         let props = self.reactor.compute();
-        self.render_text_area(props);
+        self.render_text_area(props, syntax_tree);
 
         let props = self.reactor.compute();
         self.render_line_number(props);
@@ -118,7 +118,7 @@ impl Renderer {
         self.stdout.flush().unwrap();
     }
 
-    fn render_text_area(&mut self, props: TextAreaProps) {
+    fn render_text_area(&mut self, props: TextAreaProps, syntax_tree: &Node) {
         let max_line_digit = props.max_line_digit;
         for (i, line) in props
             .buffer
