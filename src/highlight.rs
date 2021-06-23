@@ -25,7 +25,7 @@ impl Highlighter {
             .parse_with(
                 &mut |byte, _| {
                     if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
-                        return s[byte - i..].as_bytes();
+                        return &s.as_bytes()[byte - i..];
                     }
                     &[]
                 },
