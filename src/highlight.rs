@@ -18,7 +18,10 @@ pub(crate) fn get_color(syntax_kind: &str) -> String {
         "variable.builtin" => format!("{}", color::Fg(color::Cyan)),
         "punctuation.bracket" => format!("{}", color::Fg(color::LightCyan)),
         "punctuation.delimiter" => format!("{}", color::Fg(color::LightCyan)),
-        "operator" => format!("{}", color::Fg(color::Black)),
+        "operator" => format!("{}", color::Fg(color::White)),
+        "label" => format!("{}", color::Fg(color::Yellow)),
+        "comment" => format!("{}", color::Fg(color::LightBlack)),
+        "escape" => format!("{}", color::Fg(color::Magenta)),
         s => {
             tracing::debug!("{}", s);
             format!("{}", color::Fg(color::Red))
