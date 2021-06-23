@@ -23,9 +23,20 @@ fn get_color(syntax_kind: &str) -> String {
     use termion::color;
     match syntax_kind {
         "keyword" => format!("{}", color::Fg(color::Magenta)),
+        "attribute" => format!("{}", color::Fg(color::Red)),
+        "constant.builtin" => format!("{}", color::Fg(color::Red)),
         "property" => format!("{}", color::Fg(color::Red)),
+        "function.macro" => format!("{}", color::Fg(color::Red)),
+        "function" => format!("{}", color::Fg(color::Blue)),
         "function.method" => format!("{}", color::Fg(color::Blue)),
+        "type.builtin" => format!("{}", color::Fg(color::Yellow)),
         "type" => format!("{}", color::Fg(color::Yellow)),
+        "string" => format!("{}", color::Fg(color::Green)),
+        "variable.parameter" => format!("{}", color::Fg(color::Red)),
+        "variable.builtin" => format!("{}", color::Fg(color::Cyan)),
+        "punctuation.bracket" => format!("{}", color::Fg(color::LightCyan)),
+        "punctuation.delimiter" => format!("{}", color::Fg(color::LightCyan)),
+        "operator" => format!("{}", color::Fg(color::Black)),
         s => {
             tracing::debug!("{}", s);
             format!("{}", color::Fg(color::Red))
@@ -164,9 +175,15 @@ impl Renderer {
             Point::new(props.line_range.1, 0),
         );
         let matches = c.captures(&QUERY, *syntax_tree, |_| &[]);
+
+        let mut highlighted = 0;
         for matched in matches {
             for capture in matched.0.captures {
                 let start = capture.node.start_byte();
+                if highlighted >= start {
+                    break;
+                }
+
                 let end = capture.node.end_byte();
                 let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
                 let position = capture.node.start_position();
@@ -189,6 +206,8 @@ impl Renderer {
                     termion::color::Fg(termion::color::Reset),
                 )
                 .unwrap();
+
+                highlighted = start;
             }
         }
     }
