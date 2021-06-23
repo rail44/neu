@@ -1,6 +1,31 @@
 use crate::buffer::Buffer;
 use tree_sitter::{InputEdit, Parser, Tree};
 
+pub(crate) fn get_color(syntax_kind: &str) -> String {
+    use termion::color;
+    match syntax_kind {
+        "keyword" => format!("{}", color::Fg(color::Magenta)),
+        "attribute" => format!("{}", color::Fg(color::Red)),
+        "constant.builtin" => format!("{}", color::Fg(color::Red)),
+        "property" => format!("{}", color::Fg(color::Red)),
+        "function.macro" => format!("{}", color::Fg(color::Red)),
+        "function" => format!("{}", color::Fg(color::Blue)),
+        "function.method" => format!("{}", color::Fg(color::Blue)),
+        "type.builtin" => format!("{}", color::Fg(color::Yellow)),
+        "type" => format!("{}", color::Fg(color::Yellow)),
+        "string" => format!("{}", color::Fg(color::Green)),
+        "variable.parameter" => format!("{}", color::Fg(color::Red)),
+        "variable.builtin" => format!("{}", color::Fg(color::Cyan)),
+        "punctuation.bracket" => format!("{}", color::Fg(color::LightCyan)),
+        "punctuation.delimiter" => format!("{}", color::Fg(color::LightCyan)),
+        "operator" => format!("{}", color::Fg(color::Black)),
+        s => {
+            tracing::debug!("{}", s);
+            format!("{}", color::Fg(color::Red))
+        }
+    }
+}
+
 pub(crate) struct Highlighter {
     parser: Parser,
     tree: Option<Tree>,
