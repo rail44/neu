@@ -2,6 +2,7 @@ use crate::buffer::Buffer;
 use crate::compute::{
     Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, RowOffset, TerminalHeight,
 };
+use crate::highlight;
 use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::max;
@@ -18,31 +19,6 @@ static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
     )
     .unwrap()
 });
-
-fn get_color(syntax_kind: &str) -> String {
-    use termion::color;
-    match syntax_kind {
-        "keyword" => format!("{}", color::Fg(color::Magenta)),
-        "attribute" => format!("{}", color::Fg(color::Red)),
-        "constant.builtin" => format!("{}", color::Fg(color::Red)),
-        "property" => format!("{}", color::Fg(color::Red)),
-        "function.macro" => format!("{}", color::Fg(color::Red)),
-        "function" => format!("{}", color::Fg(color::Blue)),
-        "function.method" => format!("{}", color::Fg(color::Blue)),
-        "type.builtin" => format!("{}", color::Fg(color::Yellow)),
-        "type" => format!("{}", color::Fg(color::Yellow)),
-        "string" => format!("{}", color::Fg(color::Green)),
-        "variable.parameter" => format!("{}", color::Fg(color::Red)),
-        "variable.builtin" => format!("{}", color::Fg(color::Cyan)),
-        "punctuation.bracket" => format!("{}", color::Fg(color::LightCyan)),
-        "punctuation.delimiter" => format!("{}", color::Fg(color::LightCyan)),
-        "operator" => format!("{}", color::Fg(color::Black)),
-        s => {
-            tracing::debug!("{}", s);
-            format!("{}", color::Fg(color::Red))
-        }
-    }
-}
 
 #[derive(PartialEq, Clone, Debug)]
 struct TextAreaProps {
@@ -184,9 +160,13 @@ impl Renderer {
                     break;
                 }
 
+                let position = capture.node.start_position();
+                if position.row < props.line_range.0 {
+                    break;
+                }
+
                 let end = capture.node.end_byte();
                 let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
-                let position = capture.node.start_position();
                 write!(
                     self.stdout,
                     "{}",
@@ -197,15 +177,27 @@ impl Renderer {
                 )
                 .unwrap();
 
-                let s: Vec<_> = props.buffer.bytes_at(start).take(end - start).collect();
-                write!(
-                    self.stdout,
-                    "{}{}{}",
-                    get_color(syntax_kind),
-                    std::str::from_utf8(&s).unwrap(),
-                    termion::color::Fg(termion::color::Reset),
-                )
-                .unwrap();
+                let bytes: Vec<_> = props.buffer.bytes_at(start).take(end - start).collect();
+                let s = std::str::from_utf8(&bytes).unwrap();
+                for (i, l) in s.lines().enumerate() {
+                    write!(
+                        self.stdout,
+                        "{}{}{}",
+                        highlight::get_color(syntax_kind),
+                        l,
+                        termion::color::Fg(termion::color::Reset),
+                    )
+                    .unwrap();
+                    write!(
+                        self.stdout,
+                        "{}",
+                        termion::cursor::Goto(
+                            max_line_digit as u16 + 2,
+                            position.row as u16 - props.line_range.0 as u16 + 2 + i as u16
+                        ),
+                    )
+                    .unwrap();
+                }
 
                 highlighted = start;
             }
