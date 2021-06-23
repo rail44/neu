@@ -165,7 +165,6 @@ impl Renderer {
         );
         let matches = c.captures(&QUERY, *syntax_tree, |_| &[]);
         for matched in matches {
-            tracing::debug!("{:?}", matched.0.captures);
             for capture in matched.0.captures {
                 let start = capture.node.start_byte();
                 let end = capture.node.end_byte();
@@ -180,11 +179,13 @@ impl Renderer {
                     ),
                 )
                 .unwrap();
+                let (chunk, i, _, _) = props.buffer.get_chunk_at_byte(start).unwrap();
+                let s = &chunk.as_bytes()[start - i..end];
                 write!(
                     self.stdout,
                     "{}{}{}",
                     get_color(syntax_kind),
-                    props.buffer.slice(start..end).as_str(),
+                    std::str::from_utf8(s).unwrap(),
                     termion::color::Fg(termion::color::Reset),
                 )
                 .unwrap();
