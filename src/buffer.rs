@@ -175,6 +175,10 @@ impl Buffer {
     pub(crate) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
         self.0.get_chunk_at_byte(i)
     }
+
+    pub(crate) fn bytes_at(&self, i: usize) -> impl Iterator<Item = u8> + '_ {
+        self.0.bytes_at(i)
+    }
 }
 
 impl From<&str> for Buffer {

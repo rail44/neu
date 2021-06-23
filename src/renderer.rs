@@ -179,13 +179,13 @@ impl Renderer {
                     ),
                 )
                 .unwrap();
-                let (chunk, i, _, _) = props.buffer.get_chunk_at_byte(start).unwrap();
-                let s = &chunk.as_bytes()[start - i..end];
+
+                let s: Vec<_> = props.buffer.bytes_at(start).take(end - start).collect();
                 write!(
                     self.stdout,
                     "{}{}{}",
                     get_color(syntax_kind),
-                    std::str::from_utf8(s).unwrap(),
+                    std::str::from_utf8(&s).unwrap(),
                     termion::color::Fg(termion::color::Reset),
                 )
                 .unwrap();
