@@ -1,5 +1,6 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::buffer::Buffer;
+use crate::compute::Reactor;
 use crate::highlight::Highlighter;
 use crate::mode::Mode;
 use crate::renderer::Renderer;
@@ -16,6 +17,7 @@ pub(crate) struct Store {
     renderer: Renderer,
     highlighter: Highlighter,
     rx: Receiver<Action>,
+    reactor: Reactor,
 }
 
 impl Store {
@@ -27,6 +29,7 @@ impl Store {
             rx,
             renderer,
             highlighter,
+            reactor: Reactor::new(),
             state: State::new(),
         };
         store.notify();
@@ -41,6 +44,7 @@ impl Store {
             rx,
             renderer,
             highlighter,
+            reactor: Reactor::new(),
             state: State::with_buffer(buffer),
         };
         store.notify();
@@ -70,10 +74,10 @@ impl Store {
     }
 
     fn notify(&mut self) {
-        self.highlighter.load_buffer(&self.state.buffer);
         self.scroll();
-        self.renderer
-            .render(&self.state, &self.highlighter.tree().unwrap().root_node());
+        self.reactor.load_state(self.state.clone());
+        let highlights = self.highlighter.update(&mut self.reactor);
+        self.renderer.render(&mut self.reactor, highlights);
     }
 
     fn movement(&mut self, movement: MovementKind, count: usize) {

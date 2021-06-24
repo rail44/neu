@@ -2,23 +2,13 @@ use crate::buffer::Buffer;
 use crate::compute::{
     Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, RowOffset, TerminalHeight,
 };
-use crate::highlight;
 use crate::mode::Mode;
-use crate::state::{Cursor, State};
+use crate::state::Cursor;
 use core::cmp::max;
-use once_cell::sync::Lazy;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
-use tree_sitter::{Node, Point};
+use tree_sitter::Point;
 use unicode_width::UnicodeWidthStr;
-
-static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
-    tree_sitter::Query::new(
-        tree_sitter_rust::language(),
-        tree_sitter_rust::HIGHLIGHT_QUERY,
-    )
-    .unwrap()
-});
 
 #[derive(PartialEq, Clone, Debug)]
 struct TextAreaProps {
@@ -92,7 +82,6 @@ impl Compute for StatusLineProps {
 
 pub(crate) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
-    reactor: Reactor,
 }
 
 impl Renderer {
@@ -101,34 +90,30 @@ impl Renderer {
         write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
         write!(stdout, "{}", termion::clear::All).unwrap();
         stdout.flush().unwrap();
-        Self {
-            stdout,
-            reactor: Reactor::new(),
-        }
+        Self { stdout }
     }
 }
 
 impl Renderer {
-    pub(crate) fn render(&mut self, state: &State, syntax_tree: &Node) {
+    pub(crate) fn render(&mut self, reactor: &mut Reactor, highlights: Vec<(Point, String)>) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
-        self.reactor.load_state(state.clone());
 
-        let props = self.reactor.compute();
-        self.render_text_area(props, syntax_tree);
+        let props = reactor.compute();
+        self.render_text_area(props, highlights);
 
-        let props = self.reactor.compute();
+        let props = reactor.compute();
         self.render_line_number(props);
 
-        let props = self.reactor.compute();
+        let props = reactor.compute();
         self.render_status_line(props);
 
-        let props = self.reactor.compute();
+        let props = reactor.compute();
         self.render_cursor(props);
 
         self.stdout.flush().unwrap();
     }
 
-    fn render_text_area(&mut self, props: TextAreaProps, syntax_tree: &Node) {
+    fn render_text_area(&mut self, props: TextAreaProps, highlights: Vec<(Point, String)>) {
         let max_line_digit = props.max_line_digit;
         for (i, line) in props
             .buffer
@@ -145,61 +130,28 @@ impl Renderer {
             write!(self.stdout, "{}", line.as_str()).unwrap();
         }
 
-        let mut c = tree_sitter::QueryCursor::new();
-        c.set_point_range(
-            Point::new(props.line_range.0, 0),
-            Point::new(props.line_range.1, 0),
-        );
-        let matches = c.captures(&QUERY, *syntax_tree, |_| &[]);
-
-        let mut highlighted = 0;
-        for matched in matches {
-            for capture in matched.0.captures {
-                let start = capture.node.start_byte();
-                if highlighted >= start {
-                    break;
-                }
-
-                let position = capture.node.start_position();
-                if position.row < props.line_range.0 {
-                    break;
-                }
-
-                let end = capture.node.end_byte();
-                let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
+        for highlight in highlights {
+            let position = highlight.0;
+            write!(
+                self.stdout,
+                "{}",
+                termion::cursor::Goto(
+                    max_line_digit as u16 + 2 + position.column as u16,
+                    position.row as u16 - props.line_range.0 as u16 + 1
+                ),
+            )
+            .unwrap();
+            for (i, l) in highlight.1.lines().enumerate() {
+                write!(self.stdout, "{}", l,).unwrap();
                 write!(
                     self.stdout,
                     "{}",
                     termion::cursor::Goto(
-                        max_line_digit as u16 + 2 + position.column as u16,
-                        position.row as u16 - props.line_range.0 as u16 + 1
+                        max_line_digit as u16 + 2,
+                        position.row as u16 - props.line_range.0 as u16 + 2 + i as u16
                     ),
                 )
                 .unwrap();
-
-                let bytes: Vec<_> = props.buffer.bytes_at(start).take(end - start).collect();
-                let s = std::str::from_utf8(&bytes).unwrap();
-                for (i, l) in s.lines().enumerate() {
-                    write!(
-                        self.stdout,
-                        "{}{}{}",
-                        highlight::get_color(syntax_kind),
-                        l,
-                        termion::color::Fg(termion::color::Reset),
-                    )
-                    .unwrap();
-                    write!(
-                        self.stdout,
-                        "{}",
-                        termion::cursor::Goto(
-                            max_line_digit as u16 + 2,
-                            position.row as u16 - props.line_range.0 as u16 + 2 + i as u16
-                        ),
-                    )
-                    .unwrap();
-                }
-
-                highlighted = start;
             }
         }
     }

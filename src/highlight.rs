@@ -1,7 +1,17 @@
 use crate::buffer::Buffer;
-use tree_sitter::{InputEdit, Parser, Tree};
+use crate::compute::{LineRange, Reactor};
+use once_cell::sync::Lazy;
+use tree_sitter::{InputEdit, Parser, Point, Tree};
 
-pub(crate) fn get_color(syntax_kind: &str) -> String {
+static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
+    tree_sitter::Query::new(
+        tree_sitter_rust::language(),
+        tree_sitter_rust::HIGHLIGHT_QUERY,
+    )
+    .unwrap()
+});
+
+fn get_color(syntax_kind: &str) -> String {
     use termion::color;
     match syntax_kind {
         "keyword" => format!("{}", color::Fg(color::Magenta)),
@@ -49,7 +59,7 @@ impl Highlighter {
         self.parser.set_language(language).unwrap();
     }
 
-    pub(crate) fn load_buffer(&mut self, b: &Buffer) {
+    fn load_buffer(&mut self, b: &Buffer) {
         let tree = self
             .parser
             .parse_with(
@@ -65,10 +75,6 @@ impl Highlighter {
         self.tree = Some(tree);
     }
 
-    pub(crate) fn tree(&self) -> Option<&Tree> {
-        self.tree.as_ref()
-    }
-
     pub(crate) fn edit_tree(&mut self, input: &InputEdit) {
         if self.tree.is_none() {
             return;
@@ -76,5 +82,48 @@ impl Highlighter {
 
         let tree = self.tree.as_mut().unwrap();
         tree.edit(&input);
+    }
+
+    pub(crate) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
+        let b = reactor.compute();
+        self.load_buffer(&b);
+
+        let mut c = tree_sitter::QueryCursor::new();
+        let line_range: LineRange = reactor.compute();
+        c.set_point_range(Point::new(line_range.0, 0), Point::new(line_range.1, 0));
+        let syntax_tree = self.tree.as_ref().unwrap().root_node();
+        let matches = c.captures(&QUERY, syntax_tree, |_| &[]);
+
+        let highlighted = 0;
+        let mut result = Vec::new();
+        for matched in matches {
+            for capture in matched.0.captures {
+                let start = capture.node.start_byte();
+                if highlighted > start {
+                    break;
+                }
+
+                let position = capture.node.start_position();
+                if position.row < line_range.0 {
+                    break;
+                }
+
+                let end = capture.node.end_byte();
+                let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
+
+                let bytes: Vec<_> = b.bytes_at(start).take(end - start).collect();
+                let s = std::str::from_utf8(&bytes).unwrap();
+                result.push((
+                    position,
+                    format!(
+                        "{}{}{}",
+                        get_color(syntax_kind),
+                        s,
+                        termion::color::Fg(termion::color::Reset)
+                    ),
+                ));
+            }
+        }
+        result
     }
 }
