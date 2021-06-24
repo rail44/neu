@@ -4,7 +4,7 @@ use crate::compute::{
 };
 use crate::mode::Mode;
 use crate::state::Cursor;
-use core::cmp::max;
+use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use termion::raw::{IntoRawMode, RawTerminal};
 use tree_sitter::Point;
@@ -209,20 +209,18 @@ impl Renderer {
         let row = cursor.row - row_offset;
 
         let current_line = props.current_line;
-        let end = current_line
-            .char_indices()
-            .take(col + 2)
-            .last()
-            .map(|(i, _)| i)
-            .unwrap_or(0);
-        let s = &current_line[..end];
-        let width = UnicodeWidthStr::width(s);
+        let s: String = current_line
+            .chars()
+            .take(min(col + 1, current_line.chars().count() - 1))
+            .collect();
+        let width = UnicodeWidthStr::width(s.as_str());
+        let col_pos = width + (col + 1 - s.chars().count());
 
         let max_line_digit = props.max_line_digit;
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto((max_line_digit + 1 + max(1, width)) as u16, row as u16 + 1)
+            termion::cursor::Goto((max_line_digit + 1 + col_pos) as u16, row as u16 + 1)
         )
         .unwrap();
     }

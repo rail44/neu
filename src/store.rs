@@ -73,8 +73,19 @@ impl Store {
         );
     }
 
+    fn coerce_col(&mut self) {
+        let max_col = if self.state.mode.is_insert() {
+            self.state.buffer.row_len(self.state.cursor.row)
+        } else {
+            self.state.buffer.row_len(self.state.cursor.row).saturating_sub(1)
+        };
+
+        self.state.cursor.col = min(self.state.cursor.col, max_col);
+    }
+
     fn notify(&mut self) {
         self.scroll();
+        self.coerce_col();
         self.reactor.load_state(self.state.clone());
         let highlights = self.highlighter.update(&mut self.reactor);
         self.renderer.render(&mut self.reactor, highlights);
@@ -99,11 +110,6 @@ impl Store {
             }
             CursorRight => {
                 state.cursor.col += count;
-
-                state.cursor.col = min(
-                    state.cursor.col,
-                    state.buffer.row_len(state.cursor.row).saturating_sub(1),
-                );
             }
             CursorLineHead => {
                 state.cursor.col = 0;
@@ -147,7 +153,7 @@ impl Store {
             }
             MoveToLineTail => {
                 self.movement(
-                    MovementKind::MoveTo(self.state.current_line().1.saturating_sub(1)),
+                    MovementKind::MoveTo(self.state.current_line().1.saturating_sub(2)),
                     count,
                 );
             }
@@ -281,8 +287,8 @@ impl Store {
                 self.state.mode = Mode::Insert;
             }
             IntoAppendMode => {
-                self.movement(MovementKind::CursorRight, 1);
                 self.action(IntoInsertMode.once());
+                self.movement(MovementKind::CursorRight, 1);
             }
             IntoCmdLineMode => {
                 self.state.mode = Mode::CmdLine(String::new());

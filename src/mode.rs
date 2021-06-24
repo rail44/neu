@@ -12,18 +12,26 @@ impl Default for Mode {
 }
 
 impl Mode {
+    pub(crate) fn is_insert(&self) -> bool {
+        if let Mode::Insert = self {
+            return true;
+        }
+
+        false
+    }
+
     pub(crate) fn get_cmd(&self) -> &String {
         if let Mode::Normal(cmd) = self {
             return cmd;
         }
 
-        panic!();
+        unreachable!();
     }
 
     pub(crate) fn get_cmdline(&self) -> &String {
         if let Mode::CmdLine(cmd) = self {
             return cmd;
         }
-        panic!();
+        unreachable!();
     }
 }
