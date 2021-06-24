@@ -74,7 +74,6 @@ impl Store {
     }
 
     fn coerce_col(&mut self) {
-        tracing::debug!("{:?}", self.state);
         let max_col = if self.state.mode.is_insert() {
             self.state.buffer.row_len(self.state.cursor.row)
         } else {

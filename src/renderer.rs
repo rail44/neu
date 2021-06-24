@@ -142,6 +142,10 @@ impl Renderer {
             )
             .unwrap();
             for (i, l) in highlight.1.lines().enumerate() {
+                if position.row + i + 1 > props.line_range.1 {
+                    write!(self.stdout, "{}", termion::color::Fg(termion::color::Reset)).unwrap();
+                    break;
+                }
                 write!(self.stdout, "{}", l,).unwrap();
                 write!(
                     self.stdout,
