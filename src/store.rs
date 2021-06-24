@@ -74,10 +74,14 @@ impl Store {
     }
 
     fn coerce_col(&mut self) {
+        tracing::debug!("{:?}", self.state);
         let max_col = if self.state.mode.is_insert() {
             self.state.buffer.row_len(self.state.cursor.row)
         } else {
-            self.state.buffer.row_len(self.state.cursor.row).saturating_sub(1)
+            self.state
+                .buffer
+                .row_len(self.state.cursor.row)
+                .saturating_sub(1)
         };
 
         self.state.cursor.col = min(self.state.cursor.col, max_col);
@@ -140,7 +144,7 @@ impl Store {
             ScollScreenUp => {
                 let textarea_row = (state.size.1 - 2) as usize;
                 state.row_offset = state.row_offset.saturating_sub(textarea_row);
-                state.cursor.row = state.row_offset + textarea_row - 1;
+                state.cursor.row = min(state.cursor.row, state.row_offset + textarea_row - 1);
             }
             ScollScreenDown => {
                 let textarea_row = (state.size.1 - 2) as usize;

@@ -27,6 +27,7 @@ impl State {
 
         Self {
             size,
+            buffer: "\n".into(),
             ..Default::default()
         }
     }

@@ -53,7 +53,7 @@ impl Buffer {
     }
 
     pub(crate) fn count_lines(&self) -> usize {
-        self.0.len_lines()
+        self.0.len_lines().saturating_sub(1)
     }
 
     pub(crate) fn insert(&mut self, col: usize, row: usize, s: &str) {
