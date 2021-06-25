@@ -14,6 +14,14 @@ fn get_language_info(lang: &Language) -> (TSLanguage, Query) {
             ).unwrap();
             (lang, query)
         }
+        JavaScript => {
+            let lang = tree_sitter_javascript::language();
+            let query = tree_sitter::Query::new(
+                lang,
+                tree_sitter_javascript::HIGHLIGHT_QUERY,
+            ).unwrap();
+            (lang, query)
+        }
         _ => unimplemented!(),
     }
 }
@@ -118,10 +126,6 @@ impl Highlighter {
                 }
 
                 let position = capture.node.start_position();
-                if position.row < line_range.0 {
-                    break;
-                }
-
                 let end = capture.node.end_byte();
                 let syntax_kind = &query.capture_names()[capture.index as usize];
 
