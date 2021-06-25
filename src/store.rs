@@ -4,6 +4,7 @@ use crate::highlight::Highlighter;
 use crate::mode::Mode;
 use crate::renderer::Renderer;
 use crate::state::State;
+use crate::language::Language;
 
 use core::cmp::{max, min};
 use flume::Receiver;
@@ -21,8 +22,7 @@ pub(crate) struct Store {
 
 impl Store {
     pub(crate) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
-        let mut highlighter = Highlighter::new();
-        highlighter.set_rust_language();
+        let highlighter = Highlighter::new();
 
         let mut store = Self {
             rx,
@@ -37,14 +37,16 @@ impl Store {
 
     pub(crate) fn open_file(filename: &str, rx: Receiver<Action>, renderer: Renderer) -> Self {
         let mut highlighter = Highlighter::new();
-        highlighter.set_rust_language();
+        let state = State::open_file(filename);
+        let lang = Language::from_path(filename);
+        highlighter.set_language(&lang);
 
         let mut store = Self {
             rx,
             renderer,
             highlighter,
             reactor: Reactor::new(),
-            state: State::open_file(filename),
+            state,
         };
         store.notify();
         store

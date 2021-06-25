@@ -1,15 +1,22 @@
 use crate::buffer::Buffer;
 use crate::compute::{LineRange, Reactor};
-use once_cell::sync::Lazy;
-use tree_sitter::{InputEdit, Parser, Point, Tree};
+use crate::language::Language;
+use tree_sitter::{InputEdit, Parser, Point, Tree, Query, Language as TSLanguage};
 
-static QUERY: Lazy<tree_sitter::Query> = Lazy::new(|| {
-    tree_sitter::Query::new(
-        tree_sitter_rust::language(),
-        tree_sitter_rust::HIGHLIGHT_QUERY,
-    )
-    .unwrap()
-});
+fn get_language_info(lang: &Language) -> (TSLanguage, Query) {
+    use Language::*;
+    match lang {
+        Rust => {
+            let lang = tree_sitter_rust::language();
+            let query = tree_sitter::Query::new(
+                lang,
+                tree_sitter_rust::HIGHLIGHT_QUERY,
+            ).unwrap();
+            (lang, query)
+        }
+        _ => unimplemented!(),
+    }
+}
 
 fn get_color(syntax_kind: &str) -> String {
     use termion::color;
@@ -43,20 +50,21 @@ fn get_color(syntax_kind: &str) -> String {
 
 pub(crate) struct Highlighter {
     parser: Parser,
+    query: Option<Query>,
     tree: Option<Tree>,
 }
 
 impl Highlighter {
     pub(crate) fn new() -> Self {
         let parser = Parser::new();
-        let mut h = Self { parser, tree: None };
-        h.set_rust_language();
+        let mut h = Self { parser, tree: None, query: None };
         h
     }
 
-    pub(crate) fn set_rust_language(&mut self) {
-        let language = tree_sitter_rust::language();
-        self.parser.set_language(language).unwrap();
+    pub(crate) fn set_language(&mut self, lang: &Language) {
+        let (ts_lang, query) = get_language_info(lang);
+        self.parser.set_language(ts_lang).unwrap();
+        self.query = Some(query);
     }
 
     fn load_buffer(&mut self, b: &Buffer) {
@@ -85,6 +93,10 @@ impl Highlighter {
     }
 
     pub(crate) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
+        if self.query.is_none() {
+            return vec![];
+        }
+
         let b = reactor.compute();
         self.load_buffer(&b);
 
@@ -92,7 +104,9 @@ impl Highlighter {
         let line_range: LineRange = reactor.compute();
         c.set_point_range(Point::new(line_range.0, 0), Point::new(line_range.1, 0));
         let syntax_tree = self.tree.as_ref().unwrap().root_node();
-        let matches = c.captures(&QUERY, syntax_tree, |_| &[]);
+
+        let query = self.query.as_mut().unwrap();
+        let matches = c.captures(query, syntax_tree, |_| &[]);
 
         let highlighted = 0;
         let mut result = Vec::new();
@@ -109,7 +123,7 @@ impl Highlighter {
                 }
 
                 let end = capture.node.end_byte();
-                let syntax_kind = &(*QUERY).capture_names()[capture.index as usize];
+                let syntax_kind = &query.capture_names()[capture.index as usize];
 
                 let bytes: Vec<_> = b.bytes_at(start).take(end - start).collect();
                 let s = std::str::from_utf8(&bytes).unwrap();

@@ -20,6 +20,7 @@ mod renderer;
 mod selection;
 mod state;
 mod store;
+mod language;
 
 use crate::editor::Editor;
 use crate::renderer::Renderer;
