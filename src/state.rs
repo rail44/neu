@@ -1,3 +1,7 @@
+use std::env::current_dir;
+use std::ffi::OsString;
+use std::fs;
+
 use crate::action::{EditKind, Selection, SelectionKind};
 use crate::buffer::Buffer;
 use crate::mode::Mode;
@@ -12,6 +16,7 @@ pub(crate) struct Cursor {
 
 #[derive(Default, Clone, Debug, PartialEq)]
 pub(crate) struct State {
+    pub(crate) path: Option<OsString>,
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
     pub(crate) mode: Mode,
@@ -32,12 +37,16 @@ impl State {
         }
     }
 
-    pub(crate) fn with_buffer(buffer: Buffer) -> Self {
+    pub(crate) fn open_file(filename: &str) -> Self {
         let size = terminal_size().unwrap();
+        let s = fs::read_to_string(filename).unwrap();
+        let buffer = Buffer::from(s.as_str());
+        let path = current_dir().unwrap().join(filename).into_os_string();
 
         Self {
             size,
             buffer,
+            path: Some(path),
             ..Default::default()
         }
     }

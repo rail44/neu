@@ -1,5 +1,4 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
-use crate::buffer::Buffer;
 use crate::compute::Reactor;
 use crate::highlight::Highlighter;
 use crate::mode::Mode;
@@ -36,7 +35,7 @@ impl Store {
         store
     }
 
-    pub(crate) fn with_buffer(rx: Receiver<Action>, renderer: Renderer, buffer: Buffer) -> Self {
+    pub(crate) fn open_file(filename: &str, rx: Receiver<Action>, renderer: Renderer) -> Self {
         let mut highlighter = Highlighter::new();
         highlighter.set_rust_language();
 
@@ -45,7 +44,7 @@ impl Store {
             renderer,
             highlighter,
             reactor: Reactor::new(),
-            state: State::with_buffer(buffer),
+            state: State::open_file(filename),
         };
         store.notify();
         store

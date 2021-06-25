@@ -21,7 +21,6 @@ mod selection;
 mod state;
 mod store;
 
-use crate::buffer::Buffer;
 use crate::editor::Editor;
 use crate::renderer::Renderer;
 use crate::store::Store;
@@ -64,10 +63,7 @@ fn main() {
         let (tx, rx) = flume::unbounded();
 
         let mut store = if let Some(filename) = opts.filename {
-            let s = fs::read_to_string(filename).unwrap();
-            let buffer = Buffer::from(s.as_str());
-
-            Store::with_buffer(rx, renderer, buffer)
+            Store::open_file(&filename, rx, renderer)
         } else {
             Store::new(rx, renderer)
         };
