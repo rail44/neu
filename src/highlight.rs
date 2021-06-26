@@ -3,21 +3,21 @@ use crate::compute::{LineRange, Reactor};
 use crate::language::Language;
 use tree_sitter::{InputEdit, Language as TSLanguage, Parser, Point, Query, Tree};
 
-fn get_language_info(lang: &Language) -> (TSLanguage, Query) {
+fn get_language_info(lang: &Language) -> Option<(TSLanguage, Query)> {
     use Language::*;
     match lang {
         Rust => {
             let lang = tree_sitter_rust::language();
             let query = tree_sitter::Query::new(lang, tree_sitter_rust::HIGHLIGHT_QUERY).unwrap();
-            (lang, query)
+            Some((lang, query))
         }
         JavaScript => {
             let lang = tree_sitter_javascript::language();
             let query =
                 tree_sitter::Query::new(lang, tree_sitter_javascript::HIGHLIGHT_QUERY).unwrap();
-            (lang, query)
+            Some((lang, query))
         }
-        _ => unimplemented!(),
+        _ => None,
     }
 }
 
@@ -68,9 +68,10 @@ impl Highlighter {
     }
 
     pub(crate) fn set_language(&mut self, lang: &Language) {
-        let (ts_lang, query) = get_language_info(lang);
-        self.parser.set_language(ts_lang).unwrap();
-        self.query = Some(query);
+        if let Some((ts_lang, query)) = get_language_info(lang) {
+            self.parser.set_language(ts_lang).unwrap();
+            self.query = Some(query);
+        }
     }
 
     fn load_buffer(&mut self, b: &Buffer) {

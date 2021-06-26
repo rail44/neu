@@ -133,10 +133,7 @@ impl Renderer {
         for highlight in highlights {
             let position = highlight.0;
             let line = props.buffer.line(position.row);
-            let s: Vec<u8> = line
-                .bytes()
-                .take(position.column)
-                .collect();
+            let s: Vec<u8> = line.bytes().take(position.column).collect();
             let width = UnicodeWidthStr::width(std::str::from_utf8(&s).unwrap());
             write!(
                 self.stdout,
