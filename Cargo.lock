@@ -668,9 +668,9 @@ dependencies = [
 
 [[package]]
 name = "pin-project-lite"
-version = "0.2.6"
+version = "0.2.7"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "dc0e1f259c92177c30a4c9d177246edd0a3568b25756a977d0632cf8fa37e905"
+checksum = "8d31d11c69a6b52a174b42bdc0c30e5e11670f90788b2c471c31c1d17d449443"
 
 [[package]]
 name = "polling"
@@ -999,7 +999,7 @@ dependencies = [
 [[package]]
 name = "tracing"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "cfg-if",
  "pin-project-lite",
@@ -1010,7 +1010,7 @@ dependencies = [
 [[package]]
 name = "tracing-attributes"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "proc-macro2",
  "quote",
@@ -1020,7 +1020,7 @@ dependencies = [
 [[package]]
 name = "tracing-core"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "lazy_static",
 ]
@@ -1028,7 +1028,7 @@ dependencies = [
 [[package]]
 name = "tracing-log"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "lazy_static",
  "log",
@@ -1038,7 +1038,7 @@ dependencies = [
 [[package]]
 name = "tracing-serde"
 version = "0.2.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "serde",
  "tracing-core",
@@ -1047,7 +1047,7 @@ dependencies = [
 [[package]]
 name = "tracing-subscriber"
 version = "0.3.0"
-source = "git+https://github.com/tokio-rs/tracing#96eaaa0acf88fefbc1f6b0143c6090ca7c88f933"
+source = "git+https://github.com/tokio-rs/tracing#a74a0479c1a868830d980b381e8f49df033fbd71"
 dependencies = [
  "ansi_term",
  "chrono",
