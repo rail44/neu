@@ -209,6 +209,10 @@ impl<'a> From<RopeSlice<'a>> for BufferSlice<'a> {
 }
 
 impl<'a> BufferSlice<'a> {
+    pub(crate) fn bytes(&self) -> impl Iterator<Item = u8> + '_ {
+        self.0.bytes()
+    }
+
     pub(crate) fn as_str(&self) -> Cow<str> {
         (self.0).into()
     }

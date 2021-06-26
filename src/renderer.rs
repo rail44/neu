@@ -132,11 +132,17 @@ impl Renderer {
 
         for highlight in highlights {
             let position = highlight.0;
+            let line = props.buffer.line(position.row);
+            let s: Vec<u8> = line
+                .bytes()
+                .take(position.column)
+                .collect();
+            let width = UnicodeWidthStr::width(std::str::from_utf8(&s).unwrap());
             write!(
                 self.stdout,
                 "{}",
                 termion::cursor::Goto(
-                    max_line_digit as u16 + 2 + position.column as u16,
+                    max_line_digit as u16 + 2 + width as u16,
                     position.row as u16 - props.line_range.0 as u16 + 1
                 ),
             )
