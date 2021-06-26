@@ -176,18 +176,17 @@ impl Store {
 
     fn insert(&mut self, to: usize, s: &str) {
         let (row, col) = self.state.buffer.get_cursor_by_offset(to);
-        let l = s.chars().count();
         let byte_l = s.bytes().count();
         let edit = InputEdit {
             start_byte: to,
             old_end_byte: to,
             new_end_byte: to + byte_l,
-            start_position: Point::new(row, col),
-            old_end_position: Point::new(row, col),
-            new_end_position: Point::new(row, col + l),
+            start_position: Point::default(),
+            old_end_position: Point::default(),
+            new_end_position: Point::default(),
         };
         self.highlighter.edit_tree(&edit);
-        self.state.buffer.insert(col, self.state.cursor.row, s);
+        self.state.buffer.insert(col, row, s);
     }
 
     fn remove(&mut self, from: usize, count: usize) -> String {
@@ -195,15 +194,13 @@ impl Store {
         let s = self.state.buffer.remove(from..to);
 
         let byte_l = s.bytes().count();
-        let (start_row, start_col) = self.state.buffer.get_cursor_by_offset(from);
-        let (end_row, end_col) = self.state.buffer.get_cursor_by_offset(to);
         let edit = InputEdit {
             start_byte: from,
             old_end_byte: from + byte_l,
             new_end_byte: from,
-            start_position: Point::new(start_row, start_col),
-            old_end_position: Point::new(end_row, end_col),
-            new_end_position: Point::new(start_row, start_col),
+            start_position: Point::default(),
+            old_end_position: Point::default(),
+            new_end_position: Point::default(),
         };
         self.highlighter.edit_tree(&edit);
         s
