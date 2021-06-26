@@ -8,8 +8,8 @@ impl Language {
     pub(crate) fn from_extension(extension: &str) -> Self {
         use Language::*;
         match extension {
-            "rs"  => Rust,
-            "js"  => JavaScript,
+            "rs" => Rust,
+            "js" => JavaScript,
             _ => Unknown,
         }
     }

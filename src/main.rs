@@ -15,12 +15,12 @@ mod compute;
 mod config;
 mod editor;
 mod highlight;
+mod language;
 mod mode;
 mod renderer;
 mod selection;
 mod state;
 mod store;
-mod language;
 
 use crate::editor::Editor;
 use crate::renderer::Renderer;
