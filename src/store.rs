@@ -209,8 +209,7 @@ impl Store {
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
-        self.state.prev_edit = Some((edit.clone(), count));
-        match edit {
+        match &edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
                 let start = self
@@ -221,7 +220,7 @@ impl Store {
                 self.action(ActionKind::SetYank(yank).once());
             }
             Remove(selection) => {
-                let (from, to) = self.state.measure_selection(selection);
+                let (from, to) = self.state.measure_selection(selection.clone());
                 let yank = self.remove(from, to - from);
                 self.action(ActionKind::SetYank(yank).once());
                 self.movement(MovementKind::MoveTo(from), 1);
@@ -279,7 +278,7 @@ impl Store {
                     .buffer
                     .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
                 if let Mode::Insert(_, s) = &mut self.state.mode {
-                    s.push(c);
+                    s.push(*c);
                 }
                 self.insert(to, &c.to_string());
                 self.movement(MovementKind::CursorRight, 1);
@@ -293,10 +292,11 @@ impl Store {
                 self.movement(MovementKind::CursorRight, s.chars().count());
             }
             Edit(selection, s) => {
-                self.edit(EditKind::Remove(selection), 1);
-                self.edit(EditKind::Insert(s), 1);
+                self.edit(EditKind::Remove(selection.clone()), 1);
+                self.edit(EditKind::Insert(s.clone()), 1);
             }
-        }
+        };
+        self.state.prev_edit = Some((edit, count));
     }
 
     fn action(&mut self, action: Action) -> bool {
@@ -307,8 +307,12 @@ impl Store {
             IntoNormalMode => {
                 let mode = mem::replace(&mut self.state.mode, Mode::Normal(String::new()));
 
-                if let Mode::Insert(_, s) = mode {
-                    self.state.prev_edit = Some((EditKind::Insert(s), 1));
+                if let Mode::Insert(k, s) = mode {
+                    let edit = match k {
+                        InsertKind::Insert => EditKind::Insert(s),
+                        InsertKind::Edit(selection) => EditKind::Edit(selection, s),
+                    };
+                    self.state.prev_edit = Some((edit, 1));
                 }
             }
             IntoInsertMode => {
@@ -317,6 +321,10 @@ impl Store {
             IntoAppendMode => {
                 self.action(IntoInsertMode.once());
                 self.movement(MovementKind::CursorRight, 1);
+            }
+            IntoEditMode(selection) => {
+                self.edit(EditKind::Remove(selection.clone()), 1);
+                self.state.mode = Mode::Insert(InsertKind::Edit(selection), String::new());
             }
             IntoCmdLineMode => {
                 self.state.mode = Mode::CmdLine(String::new());

@@ -11,6 +11,20 @@ use nom::{
 use crate::action::{Action, ActionKind, EditKind, MovementKind, SelectionKind};
 use crate::selection;
 
+fn edit(input: &str) -> IResult<&str, ActionKind> {
+    alt((
+        map(tag("cc"), |_| {
+            ActionKind::IntoEditMode(SelectionKind::Line.once())
+        }),
+        map(pair(tag("c"), selection::parse), |(_, s)| {
+            ActionKind::IntoEditMode(s)
+        }),
+        map(tag("C"), |_| {
+            ActionKind::IntoEditMode(SelectionKind::LineRemain.once())
+        }),
+    ))(input)
+}
+
 fn remove(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("dd"), |_| {
@@ -66,6 +80,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
         map(tag("P"), |_| EditKind::InsertYank.into()),
         map(tag("."), |_| ActionKind::Repeat),
         remove,
+        edit,
         yank,
         map(
             many_till(anychar, alt((tag("<C-c>"), tag("<Esc>")))),

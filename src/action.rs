@@ -124,6 +124,7 @@ pub(crate) enum ActionKind {
     IntoInsertMode,
     IntoNormalMode,
     IntoCmdLineMode,
+    IntoEditMode(Selection),
     SetYank(String),
     PushCmd(char),
     PushCmdStr(String),
