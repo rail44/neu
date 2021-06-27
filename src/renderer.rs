@@ -193,7 +193,7 @@ impl Renderer {
                     write!(self.stdout, "{}NORMAL", termion::cursor::SteadyUnderline).unwrap();
                 }
             }
-            Mode::Insert => {
+            Mode::Insert(_, _) => {
                 write!(self.stdout, "{}INSERT", termion::cursor::SteadyBar).unwrap();
             }
             Mode::CmdLine(cmd) => {

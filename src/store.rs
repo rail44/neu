@@ -2,7 +2,7 @@ use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::compute::Reactor;
 use crate::highlight::Highlighter;
 use crate::language::Language;
-use crate::mode::Mode;
+use crate::mode::{InsertKind, Mode};
 use crate::renderer::Renderer;
 use crate::state::State;
 
@@ -10,6 +10,7 @@ use core::cmp::{max, min};
 use flume::Receiver;
 use std::fs::File;
 use std::io::{BufWriter, Write};
+use std::mem;
 use tree_sitter::{InputEdit, Point};
 
 pub(crate) struct Store {
@@ -266,6 +267,9 @@ impl Store {
                     .buffer
                     .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
                 self.insert(to, "\n");
+                if let Mode::Insert(_, s) = &mut self.state.mode {
+                    s.push('\n');
+                }
                 self.movement(MovementKind::CursorDown, 1);
                 self.movement(MovementKind::CursorLineHead, 1);
             }
@@ -274,8 +278,23 @@ impl Store {
                     .state
                     .buffer
                     .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                if let Mode::Insert(_, s) = &mut self.state.mode {
+                    s.push(c);
+                }
                 self.insert(to, &c.to_string());
                 self.movement(MovementKind::CursorRight, 1);
+            }
+            Insert(s) => {
+                let to = self
+                    .state
+                    .buffer
+                    .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
+                self.insert(to, &s);
+                self.movement(MovementKind::CursorRight, s.chars().count());
+            }
+            Edit(selection, s) => {
+                self.edit(EditKind::Remove(selection), 1);
+                self.edit(EditKind::Insert(s), 1);
             }
         }
     }
@@ -286,10 +305,14 @@ impl Store {
             Movement(m) => self.movement(m, action.count),
             Edit(e) => self.edit(e, action.count),
             IntoNormalMode => {
-                self.state.mode = Mode::Normal(String::new());
+                let mode = mem::replace(&mut self.state.mode, Mode::Normal(String::new()));
+
+                if let Mode::Insert(_, s) = mode {
+                    self.state.prev_edit = Some((EditKind::Insert(s), 1));
+                }
             }
             IntoInsertMode => {
-                self.state.mode = Mode::Insert;
+                self.state.mode = Mode::Insert(InsertKind::Insert, String::new());
             }
             IntoAppendMode => {
                 self.action(IntoInsertMode.once());
@@ -305,7 +328,7 @@ impl Store {
                 Mode::Normal(cmd) => {
                     cmd.clear();
                 }
-                Mode::Insert => (),
+                Mode::Insert(_, _) => (),
                 Mode::CmdLine(cmd) => {
                     cmd.clear();
                 }
@@ -314,7 +337,7 @@ impl Store {
                 Mode::Normal(cmd) => {
                     cmd.push(c);
                 }
-                Mode::Insert => (),
+                Mode::Insert(_, _) => (),
                 Mode::CmdLine(cmd) => {
                     cmd.push(c);
                 }
@@ -323,7 +346,7 @@ impl Store {
                 Mode::Normal(cmd) => {
                     cmd.push_str(&s);
                 }
-                Mode::Insert => (),
+                Mode::Insert(_, _) => (),
                 Mode::CmdLine(cmd) => {
                     cmd.push_str(&s);
                 }
@@ -332,7 +355,7 @@ impl Store {
                 Mode::Normal(cmd) => {
                     cmd.pop();
                 }
-                Mode::Insert => (),
+                Mode::Insert(_, _) => (),
                 Mode::CmdLine(cmd) => {
                     cmd.pop();
                 }

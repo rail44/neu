@@ -102,7 +102,7 @@ impl Editor {
                     };
                     self.handle_normal_mode().await;
                 }
-                Mode::Insert => self.handle_insert_mode(k.unwrap()),
+                Mode::Insert(_, _) => self.handle_insert_mode(k.unwrap()),
                 Mode::CmdLine(_) => {
                     match k.unwrap() {
                         Key::Char('\n') => {

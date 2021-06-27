@@ -1,8 +1,16 @@
+use crate::action::Selection;
+
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) enum Mode {
     Normal(String),
-    Insert,
+    Insert(InsertKind, String),
     CmdLine(String),
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub(crate) enum InsertKind {
+    Insert,
+    Edit(Selection),
 }
 
 impl Default for Mode {
@@ -13,7 +21,7 @@ impl Default for Mode {
 
 impl Mode {
     pub(crate) fn is_insert(&self) -> bool {
-        if let Mode::Insert = self {
+        if let Mode::Insert(_, _) = self {
             return true;
         }
 

@@ -90,6 +90,8 @@ pub(crate) enum EditKind {
     Remove(Selection),
     AppendYank,
     InsertYank,
+    Insert(String),
+    Edit(Selection, String),
 }
 
 impl EditKind {
