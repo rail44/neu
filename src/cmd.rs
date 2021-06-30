@@ -78,6 +78,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
         map(tag("i"), |_| ActionKind::IntoInsertMode),
         map(tag("a"), |_| ActionKind::IntoAppendMode),
         map(tag(":"), |_| ActionKind::IntoCmdLineMode),
+        map(tag("/"), |_| ActionKind::IntoSearchMode),
         map(tag("p"), |_| EditKind::AppendYank.into()),
         map(tag("P"), |_| EditKind::InsertYank.into()),
         map(tag("."), |_| ActionKind::Repeat),

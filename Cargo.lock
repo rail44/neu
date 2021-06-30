@@ -561,6 +561,7 @@ dependencies = [
  "hashbrown",
  "nom",
  "once_cell",
+ "regex",
  "ropey",
  "serde",
  "serde_derive",

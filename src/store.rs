@@ -345,44 +345,35 @@ impl Store {
             IntoCmdLineMode => {
                 self.state.mode = Mode::CmdLine(String::new());
             }
+            IntoSearchMode => {
+                self.state.mode = Mode::Search(String::new());
+            }
             SetYank(b) => {
                 self.state.yanked = b;
             }
             ClearCmd => match &mut self.state.mode {
-                Mode::Normal(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd) => {
                     cmd.clear();
                 }
-                Mode::Insert(_, _) => (),
-                Mode::CmdLine(cmd) => {
-                    cmd.clear();
-                }
+                _ => (),
             },
             PushCmd(c) => match &mut self.state.mode {
-                Mode::Normal(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd) => {
                     cmd.push(c);
                 }
-                Mode::Insert(_, _) => (),
-                Mode::CmdLine(cmd) => {
-                    cmd.push(c);
-                }
+                _ => (),
             },
             PushCmdStr(s) => match &mut self.state.mode {
-                Mode::Normal(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd)=> {
                     cmd.push_str(&s);
                 }
-                Mode::Insert(_, _) => (),
-                Mode::CmdLine(cmd) => {
-                    cmd.push_str(&s);
-                }
+                _ => (),
             },
             PopCmd => match &mut self.state.mode {
-                Mode::Normal(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd)=> {
                     cmd.pop();
                 }
-                Mode::Insert(_, _) => (),
-                Mode::CmdLine(cmd) => {
-                    cmd.pop();
-                }
+                _ => (),
             },
             Yank(selection) => {
                 let (from, to) = self.state.measure_selection(selection);

@@ -206,6 +206,16 @@ impl Renderer {
                 )
                 .unwrap();
             }
+            Mode::Search(pattern) => {
+                write!(
+                    self.stdout,
+                    "{}SEARCH{}/{}",
+                    termion::cursor::SteadyBlock,
+                    termion::cursor::Goto(0, props.terminal_height as u16 + 1),
+                    pattern
+                )
+                .unwrap();
+            }
         };
     }
 

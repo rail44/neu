@@ -116,6 +116,19 @@ impl Editor {
                         _ => {}
                     };
                 }
+                Mode::Search(_) => {
+                    match k.unwrap() {
+                        Key::Char('\n') => {
+                            self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
+                        }
+                        Key::Char(c) => self.store.send(ActionKind::PushCmd(c).once()).unwrap(),
+                        Key::Backspace => self.store.send(ActionKind::PopCmd.once()).unwrap(),
+                        Key::Esc | Key::Ctrl('c') => {
+                            self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
+                        }
+                        _ => {}
+                    };
+                }
             }
         }
     }
