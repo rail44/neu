@@ -15,6 +15,7 @@ mod compute;
 mod config;
 mod editor;
 mod highlight;
+mod history;
 mod language;
 mod mode;
 mod renderer;

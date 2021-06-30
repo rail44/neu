@@ -1,18 +1,18 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
-use crate::buffer::Buffer;
 use crate::compute::Reactor;
 use crate::highlight::Highlighter;
+use crate::history::History;
 use crate::language::Language;
 use crate::mode::{InsertKind, Mode};
 use crate::renderer::Renderer;
-use crate::state::{Cursor, State};
+use crate::state::State;
 
 use core::cmp::{max, min};
 use flume::Receiver;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::mem;
-use tree_sitter::{InputEdit, Point, Tree};
+use tree_sitter::{InputEdit, Point};
 
 pub(crate) struct Store {
     state: State,
@@ -20,7 +20,7 @@ pub(crate) struct Store {
     highlighter: Highlighter,
     rx: Receiver<Action>,
     reactor: Reactor,
-    history: Vec<(Buffer, Cursor, Tree)>,
+    history: History,
 }
 
 impl Store {
@@ -33,7 +33,7 @@ impl Store {
             renderer,
             highlighter,
             state,
-            history: Vec::new(),
+            history: History::default(),
             reactor: Reactor::new(),
         };
         store.notify();
@@ -49,7 +49,7 @@ impl Store {
             rx,
             renderer,
             highlighter,
-            history: Vec::new(),
+            history: History::default(),
             reactor: Reactor::new(),
             state,
         };
@@ -220,11 +220,11 @@ impl Store {
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
-        self.history.push((
+        self.history.push(
             self.state.buffer.clone(),
             self.state.cursor.clone(),
             self.highlighter.tree().clone(),
-        ));
+        );
         match &edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
@@ -406,18 +406,17 @@ impl Store {
                 tx.send(self.state.clone()).unwrap();
             }
             Undo => {
-                let mut history = None;
-                for _ in 0..action.count {
-                    let h = self.history.pop();
-                    if h.is_none() {
-                        break;
-                    }
-                    history = h;
+                if let Some(record) = self.history.undo(action.count) {
+                    self.state.cursor = record.cursor;
+                    self.state.buffer = record.buffer;
+                    self.highlighter.set_tree(record.tree);
                 }
-                if let Some((b, c, t)) = history {
-                    self.state.cursor = c;
-                    self.state.buffer = b;
-                    self.highlighter.set_tree(t);
+            }
+            Redo => {
+                if let Some(record) = self.history.redo(action.count) {
+                    self.state.cursor = record.cursor;
+                    self.state.buffer = record.buffer;
+                    self.highlighter.set_tree(record.tree);
                 }
             }
         };
