@@ -406,7 +406,15 @@ impl Store {
                 tx.send(self.state.clone()).unwrap();
             }
             Undo => {
-                if let Some((b, c, t)) = self.history.pop() {
+                let mut history = None;
+                for _ in 0..action.count {
+                    let h = self.history.pop();
+                    if h.is_none() {
+                        break;
+                    }
+                    history = h;
+                }
+                if let Some((b, c, t)) = history {
                     self.state.cursor = c;
                     self.state.buffer = b;
                     self.highlighter.set_tree(t);
