@@ -5,7 +5,7 @@ use crate::highlight::Highlighter;
 use crate::language::Language;
 use crate::mode::{InsertKind, Mode};
 use crate::renderer::Renderer;
-use crate::state::State;
+use crate::state::{Cursor, State};
 
 use core::cmp::{max, min};
 use flume::Receiver;
@@ -20,7 +20,7 @@ pub(crate) struct Store {
     highlighter: Highlighter,
     rx: Receiver<Action>,
     reactor: Reactor,
-    history: Vec<(Buffer, Tree)>,
+    history: Vec<(Buffer, Cursor, Tree)>,
 }
 
 impl Store {
@@ -100,12 +100,17 @@ impl Store {
         self.renderer.render(&mut self.reactor, highlights);
     }
 
+    fn move_col(&mut self, col: usize) {
+        self.state.cursor.col = col;
+        self.state.max_column = col;
+    }
+
     fn movement(&mut self, movement: MovementKind, count: usize) {
         let state = &mut self.state;
         use MovementKind::*;
         match movement {
             CursorLeft => {
-                state.cursor.col = state.cursor.col.saturating_sub(count);
+                self.move_col(self.state.cursor.col.saturating_sub(count));
             }
             CursorDown => {
                 state.cursor.row += count;
@@ -113,20 +118,22 @@ impl Store {
                     state.buffer.count_lines().saturating_sub(1),
                     state.cursor.row,
                 );
+                state.cursor.col = state.max_column;
             }
             CursorUp => {
                 state.cursor.row = state.cursor.row.saturating_sub(count);
+                state.cursor.col = state.max_column;
             }
             CursorRight => {
-                state.cursor.col += count;
+                self.move_col(self.state.cursor.col + count);
             }
             CursorLineHead => {
-                state.cursor.col = 0;
+                self.move_col(0);
             }
             MoveTo(pos) => {
                 let result = state.buffer.get_cursor_by_offset(pos);
                 state.cursor.row = result.0;
-                state.cursor.col = result.1;
+                self.move_col(result.1);
             }
             ForwardWord => {
                 let word_offset = state
@@ -213,8 +220,11 @@ impl Store {
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
-        self.history
-            .push((self.state.buffer.clone(), self.highlighter.tree().clone()));
+        self.history.push((
+            self.state.buffer.clone(),
+            self.state.cursor.clone(),
+            self.highlighter.tree().clone(),
+        ));
         match &edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
@@ -396,9 +406,10 @@ impl Store {
                 tx.send(self.state.clone()).unwrap();
             }
             Undo => {
-                if let Some((b, tree)) = self.history.pop() {
+                if let Some((b, c, t)) = self.history.pop() {
+                    self.state.cursor = c;
                     self.state.buffer = b;
-                    self.highlighter.set_tree(tree);
+                    self.highlighter.set_tree(t);
                 }
             }
         };

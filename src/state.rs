@@ -19,6 +19,7 @@ pub(crate) struct State {
     pub(crate) path: Option<OsString>,
     pub(crate) row_offset: usize,
     pub(crate) cursor: Cursor,
+    pub(crate) max_column: usize,
     pub(crate) mode: Mode,
     pub(crate) yanked: String,
     pub(crate) size: (u16, u16),
