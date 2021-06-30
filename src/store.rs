@@ -1,7 +1,7 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::compute::Reactor;
 use crate::highlight::Highlighter;
-use crate::history::History;
+use crate::history::{History, Record};
 use crate::language::Language;
 use crate::mode::{InsertKind, Mode};
 use crate::renderer::Renderer;
@@ -90,6 +90,14 @@ impl Store {
         };
 
         self.state.cursor.col = min(self.state.cursor.col, max_col);
+    }
+
+    fn create_record(&self) -> Record {
+        Record {
+            buffer: self.state.buffer.clone(),
+            cursor: self.state.cursor.clone(),
+            tree: self.highlighter.tree().clone(),
+        }
     }
 
     fn notify(&mut self) {
@@ -220,11 +228,7 @@ impl Store {
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
-        self.history.push(
-            self.state.buffer.clone(),
-            self.state.cursor.clone(),
-            self.highlighter.tree().clone(),
-        );
+        self.history.push(self.create_record());
         match &edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
@@ -398,14 +402,14 @@ impl Store {
                 tx.send(self.state.clone()).unwrap();
             }
             Undo => {
-                if let Some(record) = self.history.undo(action.count) {
+                if let Some(record) = self.history.undo(self.create_record(), action.count) {
                     self.state.cursor = record.cursor;
                     self.state.buffer = record.buffer;
                     self.highlighter.set_tree(record.tree);
                 }
             }
             Redo => {
-                if let Some(record) = self.history.redo(action.count) {
+                if let Some(record) = self.history.redo(self.create_record(), action.count) {
                     self.state.cursor = record.cursor;
                     self.state.buffer = record.buffer;
                     self.highlighter.set_tree(record.tree);

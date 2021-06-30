@@ -16,17 +16,16 @@ pub(crate) struct History {
 }
 
 impl History {
-    pub(crate) fn push(&mut self, buffer: Buffer, cursor: Cursor, tree: Tree) {
-        let record = Record {
-            buffer,
-            cursor,
-            tree,
-        };
+    pub(crate) fn push(&mut self, r: Record) {
         self.forward.clear();
-        self.back.push(record);
+        self.back.push(r);
     }
 
-    pub(crate) fn redo(&mut self, count: usize) -> Option<Record> {
+    pub(crate) fn redo(&mut self, current: Record, count: usize) -> Option<Record> {
+        if self.forward.is_empty() {
+            return None;
+        }
+        self.back.push(current);
         for _ in 0..count {
             let r = self.forward.pop();
             if r.is_none() {
@@ -37,7 +36,11 @@ impl History {
         self.back.pop()
     }
 
-    pub(crate) fn undo(&mut self, count: usize) -> Option<Record> {
+    pub(crate) fn undo(&mut self, current: Record, count: usize) -> Option<Record> {
+        if self.back.is_empty() {
+            return None;
+        }
+        self.forward.push(current);
         for _ in 0..count {
             let r = self.back.pop();
             if r.is_none() {
