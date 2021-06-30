@@ -1,29 +1,33 @@
 use crate::buffer::Buffer;
 use crate::compute::{
-    Compute, CurrentLine, LineRange, MaxLineDigit, Reactor, RowOffset, TerminalHeight,
+    Compute, CurrentLine, LineRange, MatchPositions, MaxLineDigit, Reactor, RowOffset,
+    SearchPattern, TerminalHeight,
 };
 use crate::mode::Mode;
 use crate::state::Cursor;
 use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
+use std::ops::Range;
 use termion::raw::{IntoRawMode, RawTerminal};
 use tree_sitter::Point;
 use unicode_width::UnicodeWidthStr;
 
 #[derive(PartialEq, Clone, Debug)]
 struct TextAreaProps {
-    line_range: (usize, usize),
+    line_range: Range<usize>,
     buffer: Buffer,
     max_line_digit: usize,
+    match_positions: Vec<((usize, usize), usize)>,
 }
 
 impl Compute for TextAreaProps {
-    type Source = (LineRange, Buffer, MaxLineDigit);
+    type Source = (LineRange, Buffer, MaxLineDigit, MatchPositions);
     fn compute(source: &Self::Source) -> Self {
         Self {
-            line_range: (source.0 .0, source.0 .1),
+            line_range: source.0 .0.clone(),
             buffer: source.1.clone(),
             max_line_digit: source.2 .0,
+            match_positions: source.3 .0.clone(),
         }
     }
 }
@@ -31,7 +35,7 @@ impl Compute for TextAreaProps {
 #[derive(PartialEq, Clone, Debug)]
 struct LineNumberProps {
     max_line_digit: usize,
-    line_range: (usize, usize),
+    line_range: Range<usize>,
 }
 
 impl Compute for LineNumberProps {
@@ -39,7 +43,7 @@ impl Compute for LineNumberProps {
     fn compute(source: &Self::Source) -> Self {
         Self {
             max_line_digit: source.0 .0,
-            line_range: (source.1 .0, source.1 .1),
+            line_range: source.1 .0.clone(),
         }
     }
 }
@@ -68,14 +72,16 @@ impl Compute for CursorProps {
 struct StatusLineProps {
     mode: Mode,
     terminal_height: usize,
+    search_pattern: String,
 }
 
 impl Compute for StatusLineProps {
-    type Source = (Mode, TerminalHeight);
+    type Source = (Mode, TerminalHeight, SearchPattern);
     fn compute(source: &Self::Source) -> Self {
         Self {
             mode: source.0.clone(),
             terminal_height: source.1 .0,
+            search_pattern: source.2 .0.clone(),
         }
     }
 }
@@ -117,8 +123,8 @@ impl Renderer {
         let max_line_digit = props.max_line_digit;
         for (i, line) in props
             .buffer
-            .lines_at(props.line_range.0)
-            .take(props.line_range.1 - props.line_range.0)
+            .lines_at(props.line_range.start)
+            .take(props.line_range.end - props.line_range.start)
             .enumerate()
         {
             write!(
@@ -140,12 +146,12 @@ impl Renderer {
                 "{}",
                 termion::cursor::Goto(
                     max_line_digit as u16 + 2 + width as u16,
-                    position.row as u16 - props.line_range.0 as u16 + 1
+                    position.row as u16 - props.line_range.start as u16 + 1
                 ),
             )
             .unwrap();
             for (i, l) in highlight.1.lines().enumerate() {
-                if position.row + i + 1 > props.line_range.1 {
+                if position.row + i + 1 > props.line_range.end {
                     write!(self.stdout, "{}", termion::color::Fg(termion::color::Reset)).unwrap();
                     break;
                 }
@@ -155,18 +161,37 @@ impl Renderer {
                     "{}",
                     termion::cursor::Goto(
                         max_line_digit as u16 + 2,
-                        position.row as u16 - props.line_range.0 as u16 + 2 + i as u16
+                        position.row as u16 - props.line_range.start as u16 + 2 + i as u16
                     ),
                 )
                 .unwrap();
             }
+        }
+
+        let match_positions = props.match_positions;
+        for (position, length) in match_positions {
+            let line = props.buffer.line(position.0 + props.line_range.start);
+            let s: String = line.chars().take(position.1 + length).collect();
+            let width = UnicodeWidthStr::width(&s[..min(s.len() - 1, position.1)]);
+            write!(
+                self.stdout,
+                "{}{}{}{}",
+                termion::cursor::Goto(
+                    max_line_digit as u16 + 2 + width as u16,
+                    position.0 as u16 + 1
+                ),
+                termion::color::Bg(termion::color::Green),
+                &s[min(s.len(), position.1)..],
+                termion::color::Bg(termion::color::Reset)
+            )
+            .unwrap();
         }
     }
 
     fn render_line_number(&mut self, props: LineNumberProps) {
         let max_line_digit = props.max_line_digit;
         let line_range = props.line_range;
-        for (i, line_index) in (line_range.0..line_range.1).enumerate() {
+        for (i, line_index) in line_range.enumerate() {
             write!(self.stdout, "{}", termion::cursor::Goto(1, i as u16 + 1)).unwrap();
             write!(
                 self.stdout,
@@ -206,13 +231,13 @@ impl Renderer {
                 )
                 .unwrap();
             }
-            Mode::Search(pattern) => {
+            Mode::Search => {
                 write!(
                     self.stdout,
                     "{}SEARCH{}/{}",
                     termion::cursor::SteadyBlock,
                     termion::cursor::Goto(0, props.terminal_height as u16 + 1),
-                    pattern
+                    props.search_pattern
                 )
                 .unwrap();
             }

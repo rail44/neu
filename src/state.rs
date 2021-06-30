@@ -25,7 +25,7 @@ pub(crate) struct State {
     pub(crate) size: (u16, u16),
     pub(crate) buffer: Buffer,
     pub(crate) prev_edit: Option<(EditKind, usize)>,
-    pub(crate) mathes: Vec<(usize, usize)>,
+    pub(crate) search_pattern: String,
 }
 
 impl State {

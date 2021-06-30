@@ -3,7 +3,9 @@ use crate::mode::Mode;
 use crate::state::{Cursor, State};
 use core::cmp::min;
 use hashbrown::HashMap;
+use regex::Regex;
 use std::any::{Any, TypeId};
+use std::ops::Range;
 
 struct Computed<C>
 where
@@ -246,7 +248,7 @@ impl Compute for RowOffset {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct LineRange(pub(crate) usize, pub(crate) usize);
+pub(crate) struct LineRange(pub(crate) Range<usize>);
 
 impl Compute for LineRange {
     type Source = (RowOffset, LineCount, TerminalHeight);
@@ -255,6 +257,64 @@ impl Compute for LineRange {
         let line_count = source.1 .0;
         let textarea_row = source.2 .0 - 2;
 
-        Self(row_offset, min(line_count, textarea_row + row_offset + 1))
+        Self(row_offset..min(line_count, textarea_row + row_offset + 1))
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct SearchPattern(pub(crate) String);
+
+impl Compute for SearchPattern {
+    type Source = State;
+    fn compute(source: &Self::Source) -> Self {
+        Self(source.search_pattern.clone())
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct Matches(pub(crate) Vec<Range<usize>>);
+
+impl Compute for Matches {
+    type Source = (SearchPattern, Buffer);
+    fn compute(source: &Self::Source) -> Self {
+        let pattern = &source.0 .0;
+        if pattern.is_empty() {
+            return Self(Vec::new());
+        }
+        let re = Regex::new(pattern);
+        if re.is_err() {
+            return Self(Vec::new());
+        }
+        let re = re.unwrap();
+        let result = re
+            .find_iter(&source.1.as_str())
+            .map(|m| m.range())
+            .collect();
+        Self(result)
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(crate) struct MatchPositions(pub(crate) Vec<((usize, usize), usize)>);
+
+impl Compute for MatchPositions {
+    type Source = (Matches, LineRange, Buffer);
+    fn compute(source: &Self::Source) -> Self {
+        let mut result = Vec::new();
+        for m in &source.0 .0 {
+            let start_position = source.2.get_cursor_by_byte(m.start);
+            if source.1 .0.start > start_position.0 {
+                continue;
+            }
+            if source.1 .0.end <= start_position.0 {
+                break;
+            }
+            let end_position = source.2.get_cursor_by_byte(m.end);
+            result.push((
+                (start_position.0 - source.1 .0.start, start_position.1),
+                end_position.1 - start_position.1,
+            ));
+        }
+        Self(result)
     }
 }

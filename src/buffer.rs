@@ -172,6 +172,12 @@ impl Buffer {
         (row, offset - row_offset)
     }
 
+    pub(crate) fn get_cursor_by_byte(&self, i: usize) -> (usize, usize) {
+        let row = self.0.byte_to_line(i);
+        let row_byte = self.0.line_to_byte(row);
+        (row, i - row_byte)
+    }
+
     pub(crate) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
         self.0.get_chunk_at_byte(i)
     }
@@ -215,5 +221,9 @@ impl<'a> BufferSlice<'a> {
 
     pub(crate) fn as_str(&self) -> Cow<str> {
         (self.0).into()
+    }
+
+    pub(crate) fn chars(&self) -> impl Iterator<Item = char> + '_ {
+        self.0.chars()
     }
 }

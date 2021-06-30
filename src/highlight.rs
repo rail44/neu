@@ -115,7 +115,10 @@ impl Highlighter {
 
         let mut c = tree_sitter::QueryCursor::new();
         let line_range: LineRange = reactor.compute();
-        c.set_point_range(Point::new(line_range.0, 0), Point::new(line_range.1, 0));
+        c.set_point_range(
+            Point::new(line_range.0.start, 0),
+            Point::new(line_range.0.end, 0),
+        );
         let syntax_tree = self.tree.root_node();
 
         let query = self.query.as_mut().unwrap();

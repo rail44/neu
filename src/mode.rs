@@ -5,7 +5,7 @@ pub(crate) enum Mode {
     Normal(String),
     Insert(InsertKind, String),
     CmdLine(String),
-    Search(String),
+    Search,
 }
 
 #[derive(Clone, Debug, PartialEq)]

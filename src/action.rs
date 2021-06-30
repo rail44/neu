@@ -138,6 +138,9 @@ pub(crate) enum ActionKind {
     GetState(Sender<State>),
     Undo,
     Redo,
+    PushSearch(char),
+    PopSearch,
+    ClearSearch,
 }
 
 impl ActionKind {

@@ -346,31 +346,32 @@ impl Store {
                 self.state.mode = Mode::CmdLine(String::new());
             }
             IntoSearchMode => {
-                self.state.mode = Mode::Search(String::new());
+                self.action(ClearSearch.once());
+                self.state.mode = Mode::Search;
             }
             SetYank(b) => {
                 self.state.yanked = b;
             }
             ClearCmd => match &mut self.state.mode {
-                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) => {
                     cmd.clear();
                 }
                 _ => (),
             },
             PushCmd(c) => match &mut self.state.mode {
-                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd) => {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) => {
                     cmd.push(c);
                 }
                 _ => (),
             },
             PushCmdStr(s) => match &mut self.state.mode {
-                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd)=> {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) => {
                     cmd.push_str(&s);
                 }
                 _ => (),
             },
             PopCmd => match &mut self.state.mode {
-                Mode::Normal(cmd) | Mode::CmdLine(cmd) | Mode::Search(cmd)=> {
+                Mode::Normal(cmd) | Mode::CmdLine(cmd) => {
                     cmd.pop();
                 }
                 _ => (),
@@ -409,6 +410,15 @@ impl Store {
                     self.state.buffer = record.buffer;
                     self.highlighter.set_tree(record.tree);
                 }
+            }
+            PushSearch(c) => {
+                self.state.search_pattern.push(c);
+            }
+            PopSearch => {
+                self.state.search_pattern.pop();
+            }
+            ClearSearch => {
+                self.state.search_pattern.clear();
             }
         };
         true
