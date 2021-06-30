@@ -73,6 +73,7 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(movement_kind, |k| k.into()),
         map(tag("x"), |_| EditKind::RemoveChar.into()),
+        map(tag("u"), |_| ActionKind::Undo),
         map(tag("i"), |_| ActionKind::IntoInsertMode),
         map(tag("a"), |_| ActionKind::IntoAppendMode),
         map(tag(":"), |_| ActionKind::IntoCmdLineMode),

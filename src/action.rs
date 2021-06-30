@@ -135,6 +135,7 @@ pub(crate) enum ActionKind {
     WriteOut(String),
     Quit,
     GetState(Sender<State>),
+    Undo,
 }
 
 impl ActionKind {

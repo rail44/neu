@@ -1,4 +1,5 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
+use crate::buffer::Buffer;
 use crate::compute::Reactor;
 use crate::highlight::Highlighter;
 use crate::language::Language;
@@ -11,7 +12,7 @@ use flume::Receiver;
 use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::mem;
-use tree_sitter::{InputEdit, Point};
+use tree_sitter::{InputEdit, Point, Tree};
 
 pub(crate) struct Store {
     state: State,
@@ -19,33 +20,36 @@ pub(crate) struct Store {
     highlighter: Highlighter,
     rx: Receiver<Action>,
     reactor: Reactor,
+    history: Vec<(Buffer, Tree)>,
 }
 
 impl Store {
     pub(crate) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
-        let highlighter = Highlighter::new();
+        let state = State::new();
+        let highlighter = Highlighter::new(&state.buffer, &Language::Unknown);
 
         let mut store = Self {
             rx,
             renderer,
             highlighter,
+            state,
+            history: Vec::new(),
             reactor: Reactor::new(),
-            state: State::new(),
         };
         store.notify();
         store
     }
 
     pub(crate) fn open_file(filename: &str, rx: Receiver<Action>, renderer: Renderer) -> Self {
-        let mut highlighter = Highlighter::new();
         let state = State::open_file(filename);
         let lang = Language::from_path(filename);
-        highlighter.set_language(&lang);
+        let highlighter = Highlighter::new(&state.buffer, &lang);
 
         let mut store = Self {
             rx,
             renderer,
             highlighter,
+            history: Vec::new(),
             reactor: Reactor::new(),
             state,
         };
@@ -209,6 +213,8 @@ impl Store {
 
     fn edit(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
+        self.history
+            .push((self.state.buffer.clone(), self.highlighter.tree().clone()));
         match &edit {
             RemoveChar => {
                 let cursor = &self.state.cursor;
@@ -388,6 +394,12 @@ impl Store {
             }
             GetState(tx) => {
                 tx.send(self.state.clone()).unwrap();
+            }
+            Undo => {
+                if let Some((b, tree)) = self.history.pop() {
+                    self.state.buffer = b;
+                    self.highlighter.set_tree(tree);
+                }
             }
         };
         true

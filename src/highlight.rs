@@ -54,49 +54,55 @@ fn get_color(syntax_kind: &str) -> String {
 pub(crate) struct Highlighter {
     parser: Parser,
     query: Option<Query>,
-    tree: Option<Tree>,
+    tree: Tree,
+}
+
+fn parse(parser: &mut Parser, b: &Buffer, tree: Option<&Tree>) -> Tree {
+    parser
+        .parse_with(
+            &mut |byte, _| {
+                if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
+                    return &s.as_bytes()[byte - i..];
+                }
+                &[]
+            },
+            tree,
+        )
+        .unwrap()
 }
 
 impl Highlighter {
-    pub(crate) fn new() -> Self {
-        let parser = Parser::new();
+    pub(crate) fn new(buffer: &Buffer, lang: &Language) -> Self {
+        let mut parser = Parser::new();
+
+        let mut query = None;
+        if let Some((ts_lang, q)) = get_language_info(lang) {
+            parser.set_language(ts_lang).unwrap();
+            query = Some(q);
+        }
+        let tree = parse(&mut parser, buffer, None);
+
         Self {
             parser,
-            tree: None,
-            query: None,
+            query,
+            tree,
         }
     }
 
-    pub(crate) fn set_language(&mut self, lang: &Language) {
-        if let Some((ts_lang, query)) = get_language_info(lang) {
-            self.parser.set_language(ts_lang).unwrap();
-            self.query = Some(query);
-        }
+    pub(crate) fn set_tree(&mut self, tree: Tree) {
+        self.tree = tree;
+    }
+
+    pub(crate) fn tree(&self) -> &Tree {
+        &self.tree
     }
 
     fn load_buffer(&mut self, b: &Buffer) {
-        let tree = self
-            .parser
-            .parse_with(
-                &mut |byte, _| {
-                    if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
-                        return &s.as_bytes()[byte - i..];
-                    }
-                    &[]
-                },
-                self.tree.as_ref(),
-            )
-            .unwrap();
-        self.tree = Some(tree);
+        self.tree = parse(&mut self.parser, b, Some(&self.tree));
     }
 
     pub(crate) fn edit_tree(&mut self, input: &InputEdit) {
-        if self.tree.is_none() {
-            return;
-        }
-
-        let tree = self.tree.as_mut().unwrap();
-        tree.edit(&input);
+        self.tree.edit(&input);
     }
 
     pub(crate) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
@@ -110,7 +116,7 @@ impl Highlighter {
         let mut c = tree_sitter::QueryCursor::new();
         let line_range: LineRange = reactor.compute();
         c.set_point_range(Point::new(line_range.0, 0), Point::new(line_range.1, 0));
-        let syntax_tree = self.tree.as_ref().unwrap().root_node();
+        let syntax_tree = self.tree.root_node();
 
         let query = self.query.as_mut().unwrap();
         let matches = c.captures(query, syntax_tree, |_| &[]);
