@@ -357,6 +357,7 @@ impl Store {
                 }
                 self.insert(to, &c.to_string());
                 self.movement(MovementKind::CursorRight, 1);
+                self.history.pop();
             }
             Insert(s) => {
                 let to = self
@@ -365,6 +366,7 @@ impl Store {
                     .get_offset_by_cursor(self.state.cursor.col, self.state.cursor.row);
                 self.insert(to, &s);
                 self.movement(MovementKind::CursorRight, s.chars().count());
+                self.history.pop();
             }
             Edit(selection, s) => {
                 self.edit(EditKind::Remove(selection.clone()), 1);
@@ -391,13 +393,16 @@ impl Store {
                 }
             }
             IntoInsertMode => {
+                self.history.push(self.create_record());
                 self.state.mode = Mode::Insert(InsertKind::Insert, String::new());
             }
             IntoAppendMode => {
+                self.history.push(self.create_record());
                 self.action(IntoInsertMode.once());
                 self.movement(MovementKind::CursorRight, 1);
             }
             IntoEditMode(selection) => {
+                self.history.push(self.create_record());
                 self.edit(EditKind::Remove(selection.clone()), 1);
                 self.state.mode = Mode::Insert(InsertKind::Edit(selection), String::new());
             }

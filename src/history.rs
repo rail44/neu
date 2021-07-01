@@ -21,6 +21,10 @@ impl History {
         self.back.push(r);
     }
 
+    pub(crate) fn pop(&mut self) -> Option<Record> {
+        self.back.pop()
+    }
+
     pub(crate) fn redo(&mut self, current: Record, count: usize) -> Option<Record> {
         if self.forward.is_empty() {
             return None;
