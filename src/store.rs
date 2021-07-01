@@ -96,7 +96,7 @@ impl Store {
         Record {
             buffer: self.state.buffer.clone(),
             cursor: self.state.cursor.clone(),
-            tree: self.highlighter.tree().clone(),
+            tree: self.highlighter.tree().cloned(),
         }
     }
 
@@ -460,14 +460,18 @@ impl Store {
                 if let Some(record) = self.history.undo(self.create_record(), action.count) {
                     self.state.cursor = record.cursor;
                     self.state.buffer = record.buffer;
-                    self.highlighter.set_tree(record.tree);
+                    if let Some(tree) = record.tree {
+                        self.highlighter.set_tree(tree);
+                    }
                 }
             }
             Redo => {
                 if let Some(record) = self.history.redo(self.create_record(), action.count) {
                     self.state.cursor = record.cursor;
                     self.state.buffer = record.buffer;
-                    self.highlighter.set_tree(record.tree);
+                    if let Some(tree) = record.tree {
+                        self.highlighter.set_tree(tree);
+                    }
                 }
             }
             PushSearch(c) => {

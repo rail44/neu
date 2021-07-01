@@ -6,7 +6,7 @@ use tree_sitter::Tree;
 pub(crate) struct Record {
     pub(crate) buffer: Buffer,
     pub(crate) cursor: Cursor,
-    pub(crate) tree: Tree,
+    pub(crate) tree: Option<Tree>,
 }
 
 #[derive(Debug, Default)]

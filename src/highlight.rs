@@ -54,21 +54,7 @@ fn get_color(syntax_kind: &str) -> String {
 pub(crate) struct Highlighter {
     parser: Parser,
     query: Option<Query>,
-    tree: Tree,
-}
-
-fn parse(parser: &mut Parser, b: &Buffer, tree: Option<&Tree>) -> Tree {
-    parser
-        .parse_with(
-            &mut |byte, _| {
-                if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
-                    return &s.as_bytes()[byte - i..];
-                }
-                &[]
-            },
-            tree,
-        )
-        .unwrap()
+    tree: Option<Tree>,
 }
 
 impl Highlighter {
@@ -80,29 +66,43 @@ impl Highlighter {
             parser.set_language(ts_lang).unwrap();
             query = Some(q);
         }
-        let tree = parse(&mut parser, buffer, None);
 
-        Self {
+        let mut highlighter = Self {
             parser,
             query,
-            tree,
-        }
+            tree: None,
+        };
+        highlighter.load_buffer(buffer);
+        highlighter
     }
 
     pub(crate) fn set_tree(&mut self, tree: Tree) {
-        self.tree = tree;
+        self.tree = Some(tree);
     }
 
-    pub(crate) fn tree(&self) -> &Tree {
-        &self.tree
+    pub(crate) fn tree(&self) -> Option<&Tree> {
+        self.tree.as_ref()
     }
 
     fn load_buffer(&mut self, b: &Buffer) {
-        self.tree = parse(&mut self.parser, b, Some(&self.tree));
+        if self.parser.language().is_none() {
+            return;
+        }
+        self.tree = self.parser.parse_with(
+            &mut |byte, _| {
+                if let Some((s, i, _, _)) = b.get_chunk_at_byte(byte) {
+                    return &s.as_bytes()[byte - i..];
+                }
+                &[]
+            },
+            self.tree.as_ref(),
+        )
     }
 
     pub(crate) fn edit_tree(&mut self, input: &InputEdit) {
-        self.tree.edit(&input);
+        if let Some(tree) = &mut self.tree {
+            tree.edit(&input);
+        }
     }
 
     pub(crate) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
@@ -119,7 +119,7 @@ impl Highlighter {
             Point::new(line_range.0.start, 0),
             Point::new(line_range.0.end, 0),
         );
-        let syntax_tree = self.tree.root_node();
+        let syntax_tree = self.tree.as_mut().unwrap().root_node();
 
         let query = self.query.as_mut().unwrap();
         let matches = c.captures(query, syntax_tree, |_| &[]);

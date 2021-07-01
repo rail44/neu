@@ -335,7 +335,13 @@ impl Compute for CursorView {
             return CursorView((cursor.row, cursor.col));
         }
 
-        for (pos, _) in &source.2 .0 {
+        let matches = &source.2 .0;
+
+        if matches.is_empty() {
+            return CursorView((cursor.row, cursor.col));
+        }
+
+        for (pos, _) in matches {
             if pos.0 == cursor.row && pos.1 >= cursor.col {
                 return CursorView(*pos);
             }
@@ -345,6 +351,7 @@ impl Compute for CursorView {
             }
         }
 
-        CursorView((cursor.row, cursor.col))
+        let pos = matches.first().unwrap().0;
+        CursorView(pos)
     }
 }
