@@ -66,6 +66,8 @@ fn movement_kind(input: &str) -> IResult<&str, MovementKind> {
         }),
         map(tag("w"), |_| MovementKind::ForwardWord),
         map(tag("b"), |_| MovementKind::BackWord),
+        map(tag("n"), |_| MovementKind::GoToNextMatch),
+        map(tag("N"), |_| MovementKind::GoToPrevMatch),
     ))(input)
 }
 

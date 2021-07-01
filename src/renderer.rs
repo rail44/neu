@@ -1,10 +1,9 @@
 use crate::buffer::Buffer;
 use crate::compute::{
-    Compute, CurrentLine, LineRange, MatchPositions, MaxLineDigit, Reactor, RowOffset,
-    SearchPattern, TerminalHeight,
+    Compute, CurrentLine, CursorView, LineRange, MatchPositionsInView, MaxLineDigit, Reactor,
+    RowOffset, SearchPattern, TerminalHeight,
 };
 use crate::mode::Mode;
-use crate::state::Cursor;
 use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use std::ops::Range;
@@ -21,7 +20,7 @@ struct TextAreaProps {
 }
 
 impl Compute for TextAreaProps {
-    type Source = (LineRange, Buffer, MaxLineDigit, MatchPositions);
+    type Source = (LineRange, Buffer, MaxLineDigit, MatchPositionsInView);
     fn compute(source: &Self::Source) -> Self {
         Self {
             line_range: source.0 .0.clone(),
@@ -50,17 +49,17 @@ impl Compute for LineNumberProps {
 
 #[derive(PartialEq, Clone, Debug)]
 struct CursorProps {
-    cursor: Cursor,
+    cursor: (usize, usize),
     current_line: String,
     max_line_digit: usize,
     row_offset: usize,
 }
 
 impl Compute for CursorProps {
-    type Source = (Cursor, CurrentLine, MaxLineDigit, RowOffset);
+    type Source = (CursorView, CurrentLine, MaxLineDigit, RowOffset);
     fn compute(source: &Self::Source) -> Self {
         Self {
-            cursor: source.0.clone(),
+            cursor: source.0 .0,
             current_line: source.1 .0.clone(),
             max_line_digit: source.2 .0,
             row_offset: source.3 .0,
@@ -247,8 +246,8 @@ impl Renderer {
     fn render_cursor(&mut self, props: CursorProps) {
         let cursor = props.cursor;
         let row_offset = props.row_offset;
-        let col = cursor.col;
-        let row = cursor.row - row_offset;
+        let col = cursor.1;
+        let row = cursor.0 - row_offset;
 
         let current_line = props.current_line;
         let s: String = current_line

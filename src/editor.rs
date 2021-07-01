@@ -3,7 +3,7 @@ use std::io::stdin;
 use termion::event::Key;
 use termion::input::TermRead;
 
-use crate::action::{Action, ActionKind, EditKind};
+use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::cmd;
 use crate::cmdline;
 use crate::mode::Mode;
@@ -119,11 +119,15 @@ impl Editor {
                 Mode::Search => {
                     match k.unwrap() {
                         Key::Char('\n') => {
+                            self.store
+                                .send(MovementKind::MoveAsSeenOnView.once())
+                                .unwrap();
                             self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
                         }
                         Key::Char(c) => self.store.send(ActionKind::PushSearch(c).once()).unwrap(),
                         Key::Backspace => self.store.send(ActionKind::PopSearch.once()).unwrap(),
                         Key::Esc | Key::Ctrl('c') => {
+                            self.store.send(ActionKind::ClearSearch.once()).unwrap();
                             self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
                         }
                         _ => {}

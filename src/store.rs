@@ -1,5 +1,5 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
-use crate::compute::Reactor;
+use crate::compute::{CursorView, MatchPositions, Reactor};
 use crate::highlight::Highlighter;
 use crate::history::{History, Record};
 use crate::language::Language;
@@ -190,6 +190,61 @@ impl Store {
                     ),
                     count,
                 );
+            }
+            MoveAsSeenOnView => {
+                let pos = self.reactor.compute::<CursorView>().0;
+                self.state.cursor.row = pos.0;
+                self.state.cursor.col = pos.1;
+            }
+            GoToNextMatch => {
+                let matches = self.reactor.compute::<MatchPositions>().0;
+                let cursor = &mut self.state.cursor;
+
+                if matches.is_empty() {
+                    return;
+                }
+
+                for (pos, _) in &matches {
+                    if pos.0 == cursor.row && pos.1 > cursor.col {
+                        cursor.row = pos.0;
+                        cursor.col = pos.1;
+                        return;
+                    }
+
+                    if pos.0 > cursor.row {
+                        cursor.row = pos.0;
+                        cursor.col = pos.1;
+                        return;
+                    }
+                }
+                let pos = matches.first().unwrap().0;
+                cursor.row = pos.0;
+                cursor.col = pos.1;
+            }
+            GoToPrevMatch => {
+                let matches = self.reactor.compute::<MatchPositions>().0;
+                let cursor = &mut self.state.cursor;
+
+                if matches.is_empty() {
+                    return;
+                }
+
+                for (pos, _) in matches.iter().rev() {
+                    if pos.0 == cursor.row && pos.1 < cursor.col {
+                        cursor.row = pos.0;
+                        cursor.col = pos.1;
+                        return;
+                    }
+
+                    if pos.0 < cursor.row {
+                        cursor.row = pos.0;
+                        cursor.col = pos.1;
+                        return;
+                    }
+                }
+                let pos = matches.last().unwrap().0;
+                cursor.row = pos.0;
+                cursor.col = pos.1;
             }
         }
     }
