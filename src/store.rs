@@ -370,6 +370,7 @@ impl Store {
             }
             Edit(selection, s) => {
                 self.edit(EditKind::Remove(selection.clone()), 1);
+                self.history.pop();
                 self.edit(EditKind::Insert(s.clone()), 1);
             }
         };
@@ -402,7 +403,6 @@ impl Store {
                 self.movement(MovementKind::CursorRight, 1);
             }
             IntoEditMode(selection) => {
-                self.history.push(self.create_record());
                 self.edit(EditKind::Remove(selection.clone()), 1);
                 self.state.mode = Mode::Insert(InsertKind::Edit(selection), String::new());
             }
