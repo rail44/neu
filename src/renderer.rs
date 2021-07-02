@@ -85,12 +85,12 @@ impl Compute for StatusLineProps {
     }
 }
 
-pub(crate) struct Renderer {
+pub(super) struct Renderer {
     stdout: BufWriter<RawTerminal<Stdout>>,
 }
 
 impl Renderer {
-    pub(crate) fn new() -> Self {
+    pub(super) fn new() -> Self {
         let mut stdout = BufWriter::new(stdout().into_raw_mode().unwrap());
         write!(stdout, "{}", termion::screen::ToAlternateScreen).unwrap();
         write!(stdout, "{}", termion::clear::All).unwrap();
@@ -100,7 +100,7 @@ impl Renderer {
 }
 
 impl Renderer {
-    pub(crate) fn render(&mut self, reactor: &mut Reactor, highlights: Vec<(Point, String)>) {
+    pub(super) fn render(&mut self, reactor: &mut Reactor, highlights: Vec<(Point, String)>) {
         write!(self.stdout, "{}", termion::clear::All).unwrap();
 
         let props = reactor.compute();

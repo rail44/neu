@@ -14,7 +14,7 @@ use std::io::{BufWriter, Write};
 use std::mem;
 use tree_sitter::{InputEdit, Point};
 
-pub(crate) struct Store {
+pub(super) struct Store {
     state: State,
     renderer: Renderer,
     highlighter: Highlighter,
@@ -24,7 +24,7 @@ pub(crate) struct Store {
 }
 
 impl Store {
-    pub(crate) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
+    pub(super) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
         let state = State::new();
         let highlighter = Highlighter::new(&state.buffer, &Language::Unknown);
 
@@ -40,7 +40,7 @@ impl Store {
         store
     }
 
-    pub(crate) fn open_file(filename: &str, rx: Receiver<Action>, renderer: Renderer) -> Self {
+    pub(super) fn open_file(filename: &str, rx: Receiver<Action>, renderer: Renderer) -> Self {
         let state = State::open_file(filename);
         let lang = Language::from_path(filename);
         let highlighter = Highlighter::new(&state.buffer, &lang);
@@ -57,7 +57,7 @@ impl Store {
         store
     }
 
-    pub(crate) async fn run(&mut self) {
+    pub(super) async fn run(&mut self) {
         loop {
             let action = smol::block_on(async { self.rx.recv_async().await.unwrap() });
             if !self.action(action) {

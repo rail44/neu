@@ -9,27 +9,27 @@ use crate::mode::Mode;
 use termion::terminal_size;
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub(crate) struct Cursor {
-    pub(crate) row: usize,
-    pub(crate) col: usize,
+pub(super) struct Cursor {
+    pub(super) row: usize,
+    pub(super) col: usize,
 }
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub(crate) struct State {
-    pub(crate) path: Option<OsString>,
-    pub(crate) row_offset: usize,
-    pub(crate) cursor: Cursor,
-    pub(crate) max_column: usize,
-    pub(crate) mode: Mode,
-    pub(crate) yanked: String,
-    pub(crate) size: (u16, u16),
-    pub(crate) buffer: Buffer,
-    pub(crate) prev_edit: Option<(EditKind, usize)>,
-    pub(crate) search_pattern: String,
+pub(super) struct State {
+    pub(super) path: Option<OsString>,
+    pub(super) row_offset: usize,
+    pub(super) cursor: Cursor,
+    pub(super) max_column: usize,
+    pub(super) mode: Mode,
+    pub(super) yanked: String,
+    pub(super) size: (u16, u16),
+    pub(super) buffer: Buffer,
+    pub(super) prev_edit: Option<(EditKind, usize)>,
+    pub(super) search_pattern: String,
 }
 
 impl State {
-    pub(crate) fn new() -> Self {
+    pub(super) fn new() -> Self {
         let size = terminal_size().unwrap();
 
         Self {
@@ -39,7 +39,7 @@ impl State {
         }
     }
 
-    pub(crate) fn open_file(filename: &str) -> Self {
+    pub(super) fn open_file(filename: &str) -> Self {
         let size = terminal_size().unwrap();
         let s = fs::read_to_string(filename).unwrap();
         let buffer = Buffer::from(s.as_str());
@@ -53,31 +53,31 @@ impl State {
         }
     }
 
-    pub(crate) fn get_cursor_offset(&self) -> usize {
+    pub(super) fn get_cursor_offset(&self) -> usize {
         self.buffer
             .get_offset_by_cursor(self.cursor.col, self.cursor.row)
     }
 
-    pub(crate) fn count_word_back(&self) -> usize {
+    pub(super) fn count_word_back(&self) -> usize {
         self.buffer
             .count_back_word(self.cursor.col, self.cursor.row)
     }
 
-    pub(crate) fn count_word_forward(&self) -> usize {
+    pub(super) fn count_word_forward(&self) -> usize {
         self.buffer
             .count_forward_word(self.cursor.col, self.cursor.row)
     }
 
-    pub(crate) fn current_line(&self) -> (usize, usize) {
+    pub(super) fn current_line(&self) -> (usize, usize) {
         self.buffer.current_line(self.cursor.row)
     }
 
-    pub(crate) fn current_line_remain(&self) -> (usize, usize) {
+    pub(super) fn current_line_remain(&self) -> (usize, usize) {
         self.buffer
             .current_line_remain(self.cursor.col, self.cursor.row)
     }
 
-    pub(crate) fn measure_selection(&self, s: Selection) -> (usize, usize) {
+    pub(super) fn measure_selection(&self, s: Selection) -> (usize, usize) {
         let cursor_offset = self.get_cursor_offset();
 
         use SelectionKind::*;

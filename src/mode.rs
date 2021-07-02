@@ -1,7 +1,7 @@
 use crate::action::Selection;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum Mode {
+pub(super) enum Mode {
     Normal(String),
     Insert(InsertKind, String),
     CmdLine(String),
@@ -9,7 +9,7 @@ pub(crate) enum Mode {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum InsertKind {
+pub(super) enum InsertKind {
     Insert,
     Edit(Selection),
 }
@@ -21,7 +21,7 @@ impl Default for Mode {
 }
 
 impl Mode {
-    pub(crate) fn is_insert(&self) -> bool {
+    pub(super) fn is_insert(&self) -> bool {
         if let Mode::Insert(_, _) = self {
             return true;
         }
@@ -29,7 +29,7 @@ impl Mode {
         false
     }
 
-    pub(crate) fn get_cmd(&self) -> &String {
+    pub(super) fn get_cmd(&self) -> &String {
         if let Mode::Normal(cmd) = self {
             return cmd;
         }
@@ -37,7 +37,7 @@ impl Mode {
         unreachable!();
     }
 
-    pub(crate) fn get_cmdline(&self) -> &String {
+    pub(super) fn get_cmdline(&self) -> &String {
         if let Mode::CmdLine(cmd) = self {
             return cmd;
         }

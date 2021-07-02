@@ -20,6 +20,6 @@ fn cmdline(input: &str) -> IResult<&str, Action> {
     ))(input)
 }
 
-pub(crate) fn parse(input: &str) -> IResult<&str, Action> {
+pub(super) fn parse(input: &str) -> IResult<&str, Action> {
     cmdline(input)
 }

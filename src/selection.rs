@@ -24,6 +24,6 @@ fn selection(input: &str) -> IResult<&str, Selection> {
     })(input)
 }
 
-pub(crate) fn parse(input: &str) -> IResult<&str, Selection> {
+pub(super) fn parse(input: &str) -> IResult<&str, Selection> {
     selection(input)
 }

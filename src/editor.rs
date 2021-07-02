@@ -10,12 +10,12 @@ use crate::mode::Mode;
 
 use flume::Sender;
 
-pub(crate) struct Editor {
+pub(super) struct Editor {
     store: Sender<Action>,
 }
 
 impl Editor {
-    pub(crate) fn new(store: Sender<Action>) -> Self {
+    pub(super) fn new(store: Sender<Action>) -> Self {
         Editor { store }
     }
 
@@ -64,7 +64,7 @@ impl Editor {
         }
     }
 
-    pub(crate) async fn run(&self) {
+    pub(super) async fn run(&self) {
         let stdin = stdin();
         for k in stdin.keys() {
             let (tx, rx) = flume::unbounded();

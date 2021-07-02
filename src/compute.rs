@@ -16,14 +16,14 @@ where
     source: C::Source,
 }
 
-pub(crate) struct Reactor {
+pub(super) struct Reactor {
     generation: usize,
     state: State,
     computed_map: HashMap<TypeId, Box<dyn Any>>,
 }
 
 impl Reactor {
-    pub(crate) fn new() -> Self {
+    pub(super) fn new() -> Self {
         Self {
             generation: 0,
             state: State::new(),
@@ -31,15 +31,15 @@ impl Reactor {
         }
     }
 
-    pub(crate) fn generation(&self) -> usize {
+    pub(super) fn generation(&self) -> usize {
         self.generation
     }
 
-    pub(crate) fn compute<C: ComputeWithReactor>(&mut self) -> C {
+    pub(super) fn compute<C: ComputeWithReactor>(&mut self) -> C {
         C::compute_with_reactor(self)
     }
 
-    pub(crate) fn get_update<C: Compute>(&mut self) -> Option<C> {
+    pub(super) fn get_update<C: Compute>(&mut self) -> Option<C> {
         let source = C::Source::compute_with_reactor(self);
         if let Some(computed) = self.get_computed::<C>() {
             if source == computed.source {
@@ -51,7 +51,7 @@ impl Reactor {
         Some(v)
     }
 
-    pub(crate) fn load_state(&mut self, state: State) {
+    pub(super) fn load_state(&mut self, state: State) {
         self.generation = self.generation.wrapping_add(1);
         self.state = state;
     }
@@ -86,11 +86,11 @@ impl Reactor {
     }
 }
 
-pub(crate) trait ComputeWithReactor: PartialEq {
+pub(super) trait ComputeWithReactor: PartialEq {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self;
 }
 
-pub(crate) trait Compute: 'static + PartialEq + Clone {
+pub(super) trait Compute: 'static + PartialEq + Clone {
     type Source: ComputeWithReactor;
     fn compute(source: &Self::Source) -> Self;
 }
@@ -174,7 +174,7 @@ impl Compute for Buffer {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct LineCount(pub(crate) usize);
+pub(super) struct LineCount(pub(super) usize);
 
 impl Compute for LineCount {
     type Source = Buffer;
@@ -184,7 +184,7 @@ impl Compute for LineCount {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct MaxLineDigit(pub(crate) usize);
+pub(super) struct MaxLineDigit(pub(super) usize);
 
 impl Compute for MaxLineDigit {
     type Source = LineCount;
@@ -194,7 +194,7 @@ impl Compute for MaxLineDigit {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct CurrentLine(pub(crate) String);
+pub(super) struct CurrentLine(pub(super) String);
 
 impl Compute for CurrentLine {
     type Source = (Buffer, CursorRow);
@@ -204,7 +204,7 @@ impl Compute for CurrentLine {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct CursorRow(pub(crate) usize);
+pub(super) struct CursorRow(pub(super) usize);
 
 impl Compute for CursorRow {
     type Source = Cursor;
@@ -221,7 +221,7 @@ impl Compute for Cursor {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct TerminalHeight(pub(crate) usize);
+pub(super) struct TerminalHeight(pub(super) usize);
 
 impl Compute for TerminalHeight {
     type Source = State;
@@ -238,7 +238,7 @@ impl Compute for Mode {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct RowOffset(pub(crate) usize);
+pub(super) struct RowOffset(pub(super) usize);
 
 impl Compute for RowOffset {
     type Source = State;
@@ -248,7 +248,7 @@ impl Compute for RowOffset {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct LineRange(pub(crate) Range<usize>);
+pub(super) struct LineRange(pub(super) Range<usize>);
 
 impl Compute for LineRange {
     type Source = (RowOffset, LineCount, TerminalHeight);
@@ -262,7 +262,7 @@ impl Compute for LineRange {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct SearchPattern(pub(crate) String);
+pub(super) struct SearchPattern(pub(super) String);
 
 impl Compute for SearchPattern {
     type Source = State;
@@ -272,7 +272,7 @@ impl Compute for SearchPattern {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct MatchPositions(pub(crate) Vec<((usize, usize), usize)>);
+pub(super) struct MatchPositions(pub(super) Vec<((usize, usize), usize)>);
 
 impl Compute for MatchPositions {
     type Source = (SearchPattern, Buffer);
@@ -303,7 +303,7 @@ impl Compute for MatchPositions {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct MatchPositionsInView(pub(crate) Vec<((usize, usize), usize)>);
+pub(super) struct MatchPositionsInView(pub(super) Vec<((usize, usize), usize)>);
 
 impl Compute for MatchPositionsInView {
     type Source = (MatchPositions, LineRange);
@@ -324,7 +324,7 @@ impl Compute for MatchPositionsInView {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(crate) struct CursorView(pub(crate) (usize, usize));
+pub(super) struct CursorView(pub(super) (usize, usize));
 
 impl Compute for CursorView {
     type Source = (Cursor, Mode, MatchPositions);

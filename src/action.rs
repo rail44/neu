@@ -2,13 +2,13 @@ use crate::state::State;
 use flume::Sender;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) struct Selection {
-    pub(crate) count: usize,
-    pub(crate) kind: SelectionKind,
+pub(super) struct Selection {
+    pub(super) count: usize,
+    pub(super) kind: SelectionKind,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum SelectionKind {
+pub(super) enum SelectionKind {
     Left,
     Down,
     Up,
@@ -21,14 +21,14 @@ pub(crate) enum SelectionKind {
 }
 
 impl SelectionKind {
-    pub(crate) fn once(self) -> Selection {
+    pub(super) fn once(self) -> Selection {
         Selection {
             count: 1,
             kind: self,
         }
     }
 
-    pub(crate) fn nth(self, n: usize) -> Selection {
+    pub(super) fn nth(self, n: usize) -> Selection {
         Selection {
             count: n,
             kind: self,
@@ -37,13 +37,13 @@ impl SelectionKind {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct Action {
-    pub(crate) count: usize,
-    pub(crate) kind: ActionKind,
+pub(super) struct Action {
+    pub(super) count: usize,
+    pub(super) kind: ActionKind,
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum MovementKind {
+pub(super) enum MovementKind {
     CursorLeft,
     CursorDown,
     CursorUp,
@@ -64,14 +64,14 @@ pub(crate) enum MovementKind {
 }
 
 impl MovementKind {
-    pub(crate) fn once(self) -> Action {
+    pub(super) fn once(self) -> Action {
         Action {
             count: 1,
             kind: self.into(),
         }
     }
 
-    pub(crate) fn nth(self, n: usize) -> Action {
+    pub(super) fn nth(self, n: usize) -> Action {
         Action {
             count: n,
             kind: self.into(),
@@ -86,7 +86,7 @@ impl From<MovementKind> for ActionKind {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum EditKind {
+pub(super) enum EditKind {
     LineBreak,
     InsertChar(char),
     RemoveChar,
@@ -98,14 +98,14 @@ pub(crate) enum EditKind {
 }
 
 impl EditKind {
-    pub(crate) fn once(self) -> Action {
+    pub(super) fn once(self) -> Action {
         Action {
             count: 1,
             kind: self.into(),
         }
     }
 
-    pub(crate) fn nth(self, n: usize) -> Action {
+    pub(super) fn nth(self, n: usize) -> Action {
         Action {
             count: n,
             kind: self.into(),
@@ -120,7 +120,7 @@ impl From<EditKind> for ActionKind {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) enum ActionKind {
+pub(super) enum ActionKind {
     Movement(MovementKind),
     Edit(EditKind),
     IntoAppendMode,
@@ -147,14 +147,14 @@ pub(crate) enum ActionKind {
 }
 
 impl ActionKind {
-    pub(crate) fn once(self) -> Action {
+    pub(super) fn once(self) -> Action {
         Action {
             count: 1,
             kind: self,
         }
     }
 
-    pub(crate) fn nth(self, n: usize) -> Action {
+    pub(super) fn nth(self, n: usize) -> Action {
         Action {
             count: n,
             kind: self,

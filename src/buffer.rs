@@ -30,38 +30,38 @@ impl CharKind {
 }
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub(crate) struct Buffer(Rope);
+pub(super) struct Buffer(Rope);
 
 impl Buffer {
-    pub(crate) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
+    pub(super) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
         let offset = self.0.line_to_char(row);
         offset + col
     }
 
-    pub(crate) fn row_len(&self, row: usize) -> usize {
+    pub(super) fn row_len(&self, row: usize) -> usize {
         let start = self.0.line_to_char(row);
         let end = self.0.line_to_char(row + 1);
         (end - start).saturating_sub(1)
     }
 
-    pub(crate) fn line(&self, i: usize) -> BufferSlice {
+    pub(super) fn line(&self, i: usize) -> BufferSlice {
         self.0.line(i).into()
     }
 
-    pub(crate) fn lines_at(&self, i: usize) -> impl Iterator<Item = BufferSlice> {
+    pub(super) fn lines_at(&self, i: usize) -> impl Iterator<Item = BufferSlice> {
         self.0.lines_at(i).map(BufferSlice::from)
     }
 
-    pub(crate) fn count_lines(&self) -> usize {
+    pub(super) fn count_lines(&self) -> usize {
         self.0.len_lines().saturating_sub(1)
     }
 
-    pub(crate) fn insert(&mut self, col: usize, row: usize, s: &str) {
+    pub(super) fn insert(&mut self, col: usize, row: usize, s: &str) {
         let i = self.get_offset_by_cursor(col, row);
         self.0.insert(i, s);
     }
 
-    pub(crate) fn count_forward_word(&self, col: usize, row: usize) -> usize {
+    pub(super) fn count_forward_word(&self, col: usize, row: usize) -> usize {
         let start = self.get_offset_by_cursor(col, row);
         let mut chars = self.0.chars_at(start);
 
@@ -96,7 +96,7 @@ impl Buffer {
         i
     }
 
-    pub(crate) fn count_back_word(&self, col: usize, row: usize) -> usize {
+    pub(super) fn count_back_word(&self, col: usize, row: usize) -> usize {
         let start = self.get_offset_by_cursor(col, row);
         let mut chars = self.0.chars_at(start);
 
@@ -126,19 +126,19 @@ impl Buffer {
         i
     }
 
-    pub(crate) fn current_line_remain(&self, col: usize, row: usize) -> (usize, usize) {
+    pub(super) fn current_line_remain(&self, col: usize, row: usize) -> (usize, usize) {
         let offset = self.get_offset_by_cursor(col, row);
         let end = self.0.line_to_char(row + 1);
         (offset, end - 1)
     }
 
-    pub(crate) fn current_line(&self, row: usize) -> (usize, usize) {
+    pub(super) fn current_line(&self, row: usize) -> (usize, usize) {
         let start = self.0.line_to_char(row);
         let end = self.0.line_to_char(row + 1);
         (start, end)
     }
 
-    pub(crate) fn current_line_indent_head(&self, row: usize) -> usize {
+    pub(super) fn current_line_indent_head(&self, row: usize) -> usize {
         let start = self.0.line_to_char(row);
         let chars = self.0.chars_at(start);
 
@@ -152,37 +152,37 @@ impl Buffer {
         start + i
     }
 
-    pub(crate) fn remove<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> String {
+    pub(super) fn remove<I: RangeBounds<usize> + Clone>(&mut self, range: I) -> String {
         let seq = self.0.slice(range.clone()).into();
         self.0.remove(range);
         seq
     }
 
-    pub(crate) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
+    pub(super) fn slice<I: RangeBounds<usize> + Clone>(&self, range: I) -> BufferSlice {
         self.0.slice(range).into()
     }
 
-    pub(crate) fn as_str(&self) -> Cow<str> {
+    pub(super) fn as_str(&self) -> Cow<str> {
         (&self.0).into()
     }
 
-    pub(crate) fn get_cursor_by_offset(&self, offset: usize) -> (usize, usize) {
+    pub(super) fn get_cursor_by_offset(&self, offset: usize) -> (usize, usize) {
         let row = self.0.char_to_line(offset);
         let row_offset = self.0.line_to_char(row);
         (row, offset - row_offset)
     }
 
-    pub(crate) fn get_cursor_by_byte(&self, i: usize) -> (usize, usize) {
+    pub(super) fn get_cursor_by_byte(&self, i: usize) -> (usize, usize) {
         let row = self.0.byte_to_line(i);
         let row_byte = self.0.line_to_byte(row);
         (row, i - row_byte)
     }
 
-    pub(crate) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
+    pub(super) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
         self.0.get_chunk_at_byte(i)
     }
 
-    pub(crate) fn bytes_at(&self, i: usize) -> impl Iterator<Item = u8> + '_ {
+    pub(super) fn bytes_at(&self, i: usize) -> impl Iterator<Item = u8> + '_ {
         self.0.bytes_at(i)
     }
 }
@@ -206,7 +206,7 @@ impl From<Buffer> for Rope {
 }
 
 #[derive(Clone, Debug)]
-pub(crate) struct BufferSlice<'a>(RopeSlice<'a>);
+pub(super) struct BufferSlice<'a>(RopeSlice<'a>);
 
 impl<'a> From<RopeSlice<'a>> for BufferSlice<'a> {
     fn from(rope_slice: RopeSlice<'a>) -> Self {
@@ -215,15 +215,15 @@ impl<'a> From<RopeSlice<'a>> for BufferSlice<'a> {
 }
 
 impl<'a> BufferSlice<'a> {
-    pub(crate) fn bytes(&self) -> impl Iterator<Item = u8> + '_ {
+    pub(super) fn bytes(&self) -> impl Iterator<Item = u8> + '_ {
         self.0.bytes()
     }
 
-    pub(crate) fn as_str(&self) -> Cow<str> {
+    pub(super) fn as_str(&self) -> Cow<str> {
         (self.0).into()
     }
 
-    pub(crate) fn chars(&self) -> impl Iterator<Item = char> + '_ {
+    pub(super) fn chars(&self) -> impl Iterator<Item = char> + '_ {
         self.0.chars()
     }
 }

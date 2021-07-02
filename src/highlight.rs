@@ -51,14 +51,14 @@ fn get_color(syntax_kind: &str) -> String {
     }
 }
 
-pub(crate) struct Highlighter {
+pub(super) struct Highlighter {
     parser: Parser,
     query: Option<Query>,
     tree: Option<Tree>,
 }
 
 impl Highlighter {
-    pub(crate) fn new(buffer: &Buffer, lang: &Language) -> Self {
+    pub(super) fn new(buffer: &Buffer, lang: &Language) -> Self {
         let mut parser = Parser::new();
 
         let mut query = None;
@@ -76,11 +76,11 @@ impl Highlighter {
         highlighter
     }
 
-    pub(crate) fn set_tree(&mut self, tree: Tree) {
+    pub(super) fn set_tree(&mut self, tree: Tree) {
         self.tree = Some(tree);
     }
 
-    pub(crate) fn tree(&self) -> Option<&Tree> {
+    pub(super) fn tree(&self) -> Option<&Tree> {
         self.tree.as_ref()
     }
 
@@ -99,13 +99,13 @@ impl Highlighter {
         )
     }
 
-    pub(crate) fn edit_tree(&mut self, input: &InputEdit) {
+    pub(super) fn edit_tree(&mut self, input: &InputEdit) {
         if let Some(tree) = &mut self.tree {
             tree.edit(&input);
         }
     }
 
-    pub(crate) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
+    pub(super) fn update(&mut self, reactor: &mut Reactor) -> Vec<(Point, String)> {
         if self.query.is_none() {
             return vec![];
         }
