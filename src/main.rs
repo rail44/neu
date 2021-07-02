@@ -13,6 +13,7 @@ mod cmd;
 mod cmdline;
 mod compute;
 mod config;
+mod edit;
 mod editor;
 mod highlight;
 mod history;

@@ -1,4 +1,4 @@
-use crate::action::Selection;
+use crate::selection::Selection;
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum Mode {

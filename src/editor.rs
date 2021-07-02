@@ -52,10 +52,14 @@ impl Editor {
         match k {
             Key::Char(c) => {
                 if c == '\n' {
-                    self.store.send(EditKind::LineBreak.once()).unwrap();
+                    self.store
+                        .send(ActionKind::from(EditKind::LineBreak).once())
+                        .unwrap();
                     return;
                 }
-                self.store.send(EditKind::InsertChar(c).once()).unwrap();
+                self.store
+                    .send(ActionKind::from(EditKind::InsertChar(c)).once())
+                    .unwrap();
             }
             Key::Esc | Key::Ctrl('c') => {
                 self.store.send(ActionKind::IntoNormalMode.once()).unwrap();

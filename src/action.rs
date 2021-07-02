@@ -1,38 +1,12 @@
+use crate::selection::Selection;
 use crate::state::State;
 use flume::Sender;
 
-#[derive(Clone, Debug, PartialEq)]
-pub(super) struct Selection {
-    pub(super) count: usize,
-    pub(super) kind: SelectionKind,
-}
+pub(super) use crate::edit::EditActionKind as EditKind;
 
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum SelectionKind {
-    Left,
-    Down,
-    Up,
-    Right,
-    ForwardWord,
-    BackWord,
-    Word,
-    Line,
-    LineRemain,
-}
-
-impl SelectionKind {
-    pub(super) fn once(self) -> Selection {
-        Selection {
-            count: 1,
-            kind: self,
-        }
-    }
-
-    pub(super) fn nth(self, n: usize) -> Selection {
-        Selection {
-            count: n,
-            kind: self,
-        }
+impl From<EditKind> for ActionKind {
+    fn from(e: EditKind) -> Self {
+        Self::Edit(e)
     }
 }
 
@@ -85,40 +59,6 @@ impl From<MovementKind> for ActionKind {
     }
 }
 
-#[derive(Clone, Debug, PartialEq)]
-pub(super) enum EditKind {
-    LineBreak,
-    InsertChar(char),
-    RemoveChar,
-    Remove(Selection),
-    AppendYank,
-    InsertYank,
-    Insert(String),
-    Edit(Selection, String),
-}
-
-impl EditKind {
-    pub(super) fn once(self) -> Action {
-        Action {
-            count: 1,
-            kind: self.into(),
-        }
-    }
-
-    pub(super) fn nth(self, n: usize) -> Action {
-        Action {
-            count: n,
-            kind: self.into(),
-        }
-    }
-}
-
-impl From<EditKind> for ActionKind {
-    fn from(e: EditKind) -> Self {
-        Self::Edit(e)
-    }
-}
-
 #[derive(Clone, Debug)]
 pub(super) enum ActionKind {
     Movement(MovementKind),
@@ -147,6 +87,13 @@ pub(super) enum ActionKind {
 }
 
 impl ActionKind {
+    pub(super) fn edit(k: EditKind) -> Action {
+        Action {
+            count: 1,
+            kind: k.into(),
+        }
+    }
+
     pub(super) fn once(self) -> Action {
         Action {
             count: 1,

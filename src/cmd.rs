@@ -8,15 +8,16 @@ use nom::{
     IResult,
 };
 
-use crate::action::{Action, ActionKind, EditKind, MovementKind, SelectionKind};
-use crate::selection;
+use crate::action::{Action, ActionKind, MovementKind};
+use crate::edit::EditActionKind;
+use crate::selection::{Selection, SelectionKind};
 
 fn edit(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("cc"), |_| {
             ActionKind::IntoEditMode(SelectionKind::Line.once())
         }),
-        map(pair(tag("c"), selection::parse), |(_, s)| {
+        map(pair(tag("c"), selection), |(_, s)| {
             ActionKind::IntoEditMode(s)
         }),
         map(tag("C"), |_| {
@@ -28,13 +29,13 @@ fn edit(input: &str) -> IResult<&str, ActionKind> {
 fn remove(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("dd"), |_| {
-            EditKind::Remove(SelectionKind::Line.once()).into()
+            EditActionKind::Remove(SelectionKind::Line.once()).into()
         }),
-        map(pair(tag("d"), selection::parse), |(_, s)| {
-            EditKind::Remove(s).into()
+        map(pair(tag("d"), selection), |(_, s)| {
+            EditActionKind::Remove(s).into()
         }),
         map(tag("D"), |_| {
-            EditKind::Remove(SelectionKind::LineRemain.once()).into()
+            EditActionKind::Remove(SelectionKind::LineRemain.once()).into()
         }),
     ))(input)
 }
@@ -44,9 +45,7 @@ fn yank(input: &str) -> IResult<&str, ActionKind> {
         map(alt((tag("yy"), tag("Y"))), |_| {
             ActionKind::Yank(SelectionKind::Line.once())
         }),
-        map(pair(tag("y"), selection::parse), |(_, s)| {
-            ActionKind::Yank(s)
-        }),
+        map(pair(tag("y"), selection), |(_, s)| ActionKind::Yank(s)),
     ))(input)
 }
 
@@ -74,15 +73,15 @@ fn movement_kind(input: &str) -> IResult<&str, MovementKind> {
 fn action_kind(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(movement_kind, |k| k.into()),
-        map(tag("x"), |_| EditKind::RemoveChar.into()),
+        map(tag("x"), |_| EditActionKind::RemoveChar.into()),
         map(tag("u"), |_| ActionKind::Undo),
         map(tag("<C-r>"), |_| ActionKind::Redo),
         map(tag("i"), |_| ActionKind::IntoInsertMode),
         map(tag("a"), |_| ActionKind::IntoAppendMode),
         map(tag(":"), |_| ActionKind::IntoCmdLineMode),
         map(tag("/"), |_| ActionKind::IntoSearchMode),
-        map(tag("p"), |_| EditKind::AppendYank.into()),
-        map(tag("P"), |_| EditKind::InsertYank.into()),
+        map(tag("p"), |_| EditActionKind::AppendYank.into()),
+        map(tag("P"), |_| EditActionKind::InsertYank.into()),
         map(tag("."), |_| ActionKind::Repeat),
         remove,
         edit,
@@ -103,4 +102,24 @@ fn cmd(input: &str) -> IResult<&str, Action> {
 
 pub(super) fn parse(input: &str) -> IResult<&str, Action> {
     cmd(input)
+}
+
+fn selection_kind(input: &str) -> IResult<&str, SelectionKind> {
+    use SelectionKind::*;
+    alt((
+        map(alt((tag("h"), tag("<Left>"))), |_| Left),
+        map(alt((tag("j"), tag("<Down>"))), |_| Down),
+        map(alt((tag("k"), tag("<Up>"))), |_| Up),
+        map(alt((tag("l"), tag("<Right>"))), |_| Right),
+        map(tag("w"), |_| ForwardWord),
+        map(tag("b"), |_| BackWord),
+        map(tag("iw"), |_| Word),
+    ))(input)
+}
+
+fn selection(input: &str) -> IResult<&str, Selection> {
+    map(pair(digit0, selection_kind), |(n, kind)| {
+        let count = n.parse().unwrap_or(1);
+        Selection { count, kind }
+    })(input)
 }
