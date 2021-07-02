@@ -263,7 +263,7 @@ impl Store {
 
                 if let Mode::Insert(k, s) = mode {
                     let edit = match k {
-                        InsertKind::Insert => EditKind::Insert(s),
+                        InsertKind::Insert => EditKind::InsertString(s),
                         InsertKind::Edit(selection) => EditKind::Edit(selection, s),
                     };
                     self.state.prev_edit = Some((edit, 1));
@@ -279,7 +279,7 @@ impl Store {
                 self.movement(MovementKind::CursorRight, 1);
             }
             IntoEditMode(selection) => {
-                self.edit().action(EditKind::Remove(selection.clone()), 1);
+                self.edit().remove_selection(&selection, 1);
                 self.state.mode = Mode::Insert(InsertKind::Edit(selection), String::new());
             }
             IntoCmdLineMode => {

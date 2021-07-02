@@ -28,13 +28,13 @@ fn edit(input: &str) -> IResult<&str, ActionKind> {
 fn remove(input: &str) -> IResult<&str, ActionKind> {
     alt((
         map(tag("dd"), |_| {
-            EditKind::Remove(SelectionKind::Line.once()).into()
+            EditKind::RemoveSelection(SelectionKind::Line.once()).into()
         }),
         map(pair(tag("d"), selection), |(_, s)| {
-            EditKind::Remove(s).into()
+            EditKind::RemoveSelection(s).into()
         }),
         map(tag("D"), |_| {
-            EditKind::Remove(SelectionKind::LineRemain.once()).into()
+            EditKind::RemoveSelection(SelectionKind::LineRemain.once()).into()
         }),
     ))(input)
 }

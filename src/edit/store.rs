@@ -2,6 +2,7 @@ use crate::action::{ActionKind, EditKind, MovementKind};
 use crate::highlight::Highlighter;
 use crate::history::{History, Record};
 use crate::mode::Mode;
+use crate::selection::Selection;
 use crate::state::State;
 use crate::store::Store as RootStore;
 use tree_sitter::{InputEdit, Point};
@@ -31,16 +32,8 @@ impl<'a> Store<'a> {
         &mut self.root.highlighter
     }
 
-    fn history(&self) -> &History {
-        &self.root.history
-    }
-
     fn history_mut(&mut self) -> &mut History {
         &mut self.root.history
-    }
-
-    fn root(&self) -> &RootStore {
-        &self.root
     }
 
     fn root_mut(&mut self) -> &mut RootStore {
@@ -87,100 +80,124 @@ impl<'a> Store<'a> {
         s
     }
 
+    pub(crate) fn remove_char(&mut self, count: usize) {
+        let cursor = &self.state().cursor;
+        let start = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(cursor.col, cursor.row);
+        let yank = self.remove(start, count);
+        self.root_mut().action(ActionKind::SetYank(yank).once());
+    }
+
+    pub(crate) fn remove_selection(&mut self, selection: &Selection, count: usize) {
+        for _ in 0..count {
+            let (from, to) = self.state().measure_selection(selection.clone());
+            let yank = self.remove(from, to - from);
+            self.root_mut().action(ActionKind::SetYank(yank).once());
+            self.root_mut().movement(MovementKind::MoveTo(from), 1);
+        }
+    }
+
+    pub(crate) fn append_yank(&mut self, count: usize) {
+        let col = if self.state().yanked.ends_with('\n') {
+            self.root_mut().movement(MovementKind::CursorDown, 1);
+            0
+        } else {
+            self.root_mut().movement(MovementKind::CursorRight, 1);
+            self.state().cursor.col
+        };
+
+        let to = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(col, self.state().cursor.row);
+
+        let s = self.state().yanked.clone();
+        for _ in 0..count {
+            self.insert(to, &s);
+        }
+    }
+
+    pub(crate) fn insert_yank(&mut self, count: usize) {
+        let col = if self.state().yanked.ends_with('\n') {
+            0
+        } else {
+            self.state().cursor.col
+        };
+
+        let to = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(col, self.state().cursor.row);
+        let s = self.state().yanked.clone();
+        for _ in 0..count {
+            self.insert(to, &s);
+        }
+    }
+
+    pub(crate) fn line_break(&mut self, count: usize) {
+        let to = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        
+        for _ in 0..count {
+            self.insert(to, "\n");
+            if let Mode::Insert(_, s) = &mut self.state_mut().mode {
+                s.push('\n');
+            }
+            self.root_mut().movement(MovementKind::CursorDown, 1);
+            self.root_mut().movement(MovementKind::CursorLineHead, 1);
+        }
+    }
+
+    pub(crate) fn insert_char(&mut self, c: char, count: usize) {
+        let to = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        for _ in 0..count {
+            if let Mode::Insert(_, s) = &mut self.state_mut().mode {
+                s.push(c);
+            }
+            self.insert(to, &c.to_string());
+            self.root_mut().movement(MovementKind::CursorRight, 1);
+            self.history_mut().pop();
+        }
+    }
+
+    pub(crate) fn insert_string(&mut self, s: &str, count: usize) {
+        let to = self
+            .state()
+            .buffer
+            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        for _ in 0..count {
+            self.insert(to, &s);
+            self.root_mut()
+                .movement(MovementKind::CursorRight, s.chars().count());
+            self.history_mut().pop();
+        }
+    }
+
+    pub(crate) fn edit(&mut self, selection: &Selection, s: &str) {
+        self.remove_selection(selection, 1);
+        self.insert_string(s, 1);
+    }
+
     pub(crate) fn action(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
         let record = self.create_record();
         self.history_mut().push(record);
         match &edit {
-            RemoveChar => {
-                let cursor = &self.state().cursor;
-                let start = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(cursor.col, cursor.row);
-                let yank = self.remove(start, count);
-                self.root_mut().action(ActionKind::SetYank(yank).once());
-            }
-            Remove(selection) => {
-                let (from, to) = self.state().measure_selection(selection.clone());
-                let yank = self.remove(from, to - from);
-                self.root_mut().action(ActionKind::SetYank(yank).once());
-                self.root_mut().movement(MovementKind::MoveTo(from), 1);
-            }
-            AppendYank => {
-                let col = if self.state().yanked.ends_with('\n') {
-                    self.root_mut().movement(MovementKind::CursorDown, 1);
-                    0
-                } else {
-                    self.root_mut().movement(MovementKind::CursorRight, 1);
-                    self.state().cursor.col
-                };
-
-                let to = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(col, self.state().cursor.row);
-
-                let s = self.state().yanked.clone();
-                for _ in 0..count {
-                    self.insert(to, &s);
-                }
-            }
-            InsertYank => {
-                let col = if self.state().yanked.ends_with('\n') {
-                    0
-                } else {
-                    self.state().cursor.col
-                };
-
-                let to = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(col, self.state().cursor.row);
-                let s = self.state().yanked.clone();
-                for _ in 0..count {
-                    self.insert(to, &s);
-                }
-            }
-            LineBreak => {
-                let to = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
-                self.insert(to, "\n");
-                if let Mode::Insert(_, s) = &mut self.state_mut().mode {
-                    s.push('\n');
-                }
-                self.root_mut().movement(MovementKind::CursorDown, 1);
-                self.root_mut().movement(MovementKind::CursorLineHead, 1);
-            }
-            InsertChar(c) => {
-                let to = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
-                if let Mode::Insert(_, s) = &mut self.state_mut().mode {
-                    s.push(*c);
-                }
-                self.insert(to, &c.to_string());
-                self.root_mut().movement(MovementKind::CursorRight, 1);
-                self.history_mut().pop();
-            }
-            Insert(s) => {
-                let to = self
-                    .state()
-                    .buffer
-                    .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
-                self.insert(to, &s);
-                self.root_mut()
-                    .movement(MovementKind::CursorRight, s.chars().count());
-                self.history_mut().pop();
-            }
-            Edit(selection, s) => {
-                self.action(EditKind::Remove(selection.clone()), 1);
-                self.history_mut().pop();
-                self.action(EditKind::Insert(s.clone()), 1);
-            }
+            RemoveChar => self.remove_char(count),
+            RemoveSelection(selection) => self.remove_selection(&selection, count),
+            AppendYank => self.append_yank(count),
+            InsertYank => self.insert_yank(count),
+            LineBreak => self.line_break(count),
+            InsertChar(c) => self.insert_char(*c, count),
+            InsertString(s) =>  self.insert_string(s, count),
+            Edit(selection, s) => self.edit(selection, s),
         };
         self.state_mut().prev_edit = Some((edit, count));
     }

@@ -5,9 +5,9 @@ pub(crate) enum ActionKind {
     LineBreak,
     InsertChar(char),
     RemoveChar,
-    Remove(Selection),
+    RemoveSelection(Selection),
     AppendYank,
     InsertYank,
-    Insert(String),
+    InsertString(String),
     Edit(Selection, String),
 }
