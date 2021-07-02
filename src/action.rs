@@ -2,7 +2,7 @@ use crate::selection::Selection;
 use crate::state::State;
 use flume::Sender;
 
-pub(super) use crate::edit::EditActionKind as EditKind;
+pub(super) use crate::edit::ActionKind as EditKind;
 
 impl From<EditKind> for ActionKind {
     fn from(e: EditKind) -> Self {
