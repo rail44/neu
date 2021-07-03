@@ -1,7 +1,7 @@
 use std::env::temp_dir;
 use std::fs;
 use std::panic;
-use std::sync::Mutex;
+use std::sync::Arc;
 
 use backtrace::Backtrace;
 use clap::{crate_authors, crate_version, Clap};
@@ -46,7 +46,7 @@ fn main() {
             .append(true)
             .open(path)
             .unwrap();
-        let writer = Mutex::new(log_file);
+        let writer = Arc::new(log_file);
         tracing_subscriber::fmt()
             .pretty()
             .with_writer(writer)
