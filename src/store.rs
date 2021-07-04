@@ -174,6 +174,7 @@ impl RootStore {
                 self.movement().cursor_right(1);
             }
             IntoEditMode(selection) => {
+                self.history.push(self.create_record());
                 self.edit().remove_selection(&selection, 1);
                 self.state.mode = Mode::Insert(InsertKind::Edit(selection), String::new());
             }

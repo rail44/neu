@@ -139,8 +139,8 @@ impl<'a> EditStore<'a> {
             }
             self.insert(to, &c.to_string());
             self.root_mut().movement().cursor_right(1);
-            self.history_mut().pop();
         }
+        self.history_mut().pop();
     }
 
     pub(crate) fn insert_string(&mut self, s: &str, count: usize) {
@@ -151,7 +151,6 @@ impl<'a> EditStore<'a> {
         for _ in 0..count {
             self.insert(to, &s);
             self.root_mut().movement().cursor_right(s.chars().count());
-            self.history_mut().pop();
         }
     }
 
