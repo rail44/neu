@@ -2,4 +2,4 @@ mod action;
 mod store;
 
 pub(crate) use action::ActionKind;
-pub(super) use store::Store;
+pub(super) use store::EditStore;

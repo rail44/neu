@@ -26,7 +26,7 @@ mod store;
 
 use crate::editor::Editor;
 use crate::renderer::Renderer;
-use crate::store::Store;
+use crate::store::RootStore;
 
 #[derive(Clap)]
 #[clap(version = crate_version!(), author = crate_authors!())]
@@ -66,9 +66,9 @@ fn main() {
         let (tx, rx) = flume::unbounded();
 
         let mut store = if let Some(filename) = opts.filename {
-            Store::open_file(&filename, rx, renderer)
+            RootStore::open_file(&filename, rx, renderer)
         } else {
-            Store::new(rx, renderer)
+            RootStore::new(rx, renderer)
         };
 
         let editor = Editor::new(tx);

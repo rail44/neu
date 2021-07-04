@@ -1,51 +1,26 @@
 use crate::action::{ActionKind, EditKind, MovementKind};
-use crate::highlight::Highlighter;
-use crate::history::{History, Record};
 use crate::mode::Mode;
 use crate::selection::Selection;
-use crate::state::State;
-use crate::store::Store as RootStore;
+use crate::store::{RootStore, Store};
 use tree_sitter::{InputEdit, Point};
 
-pub(crate) struct Store<'a> {
+pub(crate) struct EditStore<'a> {
     root: &'a mut RootStore,
 }
 
-impl<'a> Store<'a> {
-    pub(crate) fn new(root: &'a mut RootStore) -> Self {
-        Self { root }
-    }
-
-    fn state(&self) -> &State {
-        &self.root.state
-    }
-
-    fn state_mut(&mut self) -> &mut State {
-        &mut self.root.state
-    }
-
-    fn highlighter(&self) -> &Highlighter {
-        &self.root.highlighter
-    }
-
-    fn highlighter_mut(&mut self) -> &mut Highlighter {
-        &mut self.root.highlighter
-    }
-
-    fn history_mut(&mut self) -> &mut History {
-        &mut self.root.history
+impl<'a> Store for EditStore<'a> {
+    fn root(&self) -> &RootStore {
+        &self.root
     }
 
     fn root_mut(&mut self) -> &mut RootStore {
         &mut self.root
     }
+}
 
-    fn create_record(&self) -> Record {
-        Record {
-            buffer: self.state().buffer.clone(),
-            cursor: self.state().cursor.clone(),
-            tree: self.highlighter().tree().cloned(),
-        }
+impl<'a> EditStore<'a> {
+    pub(crate) fn new(root: &'a mut RootStore) -> Self {
+        Self { root }
     }
 
     fn insert(&mut self, to: usize, s: &str) {
@@ -141,7 +116,7 @@ impl<'a> Store<'a> {
             .state()
             .buffer
             .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
-        
+
         for _ in 0..count {
             self.insert(to, "\n");
             if let Mode::Insert(_, s) = &mut self.state_mut().mode {
@@ -187,7 +162,7 @@ impl<'a> Store<'a> {
 
     pub(crate) fn action(&mut self, edit: EditKind, count: usize) {
         use EditKind::*;
-        let record = self.create_record();
+        let record = self.root().create_record();
         self.history_mut().push(record);
         match &edit {
             RemoveChar => self.remove_char(count),
@@ -196,7 +171,7 @@ impl<'a> Store<'a> {
             InsertYank => self.insert_yank(count),
             LineBreak => self.line_break(count),
             InsertChar(c) => self.insert_char(*c, count),
-            InsertString(s) =>  self.insert_string(s, count),
+            InsertString(s) => self.insert_string(s, count),
             Edit(selection, s) => self.edit(selection, s),
         };
         self.state_mut().prev_edit = Some((edit, count));

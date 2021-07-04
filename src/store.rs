@@ -1,6 +1,6 @@
 use crate::action::{Action, ActionKind, EditKind, MovementKind};
 use crate::compute::{CursorView, MatchPositions, Reactor};
-use crate::edit::Store as EditStore;
+use crate::edit::EditStore;
 use crate::highlight::Highlighter;
 use crate::history::{History, Record};
 use crate::language::Language;
@@ -14,7 +14,32 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 use std::mem;
 
-pub(super) struct Store {
+pub(crate) trait Store {
+    fn state(&self) -> &State {
+        &self.root().state
+    }
+
+    fn state_mut(&mut self) -> &mut State {
+        &mut self.root_mut().state
+    }
+
+    fn highlighter(&self) -> &Highlighter {
+        &self.root().highlighter
+    }
+
+    fn highlighter_mut(&mut self) -> &mut Highlighter {
+        &mut self.root_mut().highlighter
+    }
+
+    fn history_mut(&mut self) -> &mut History {
+        &mut self.root_mut().history
+    }
+
+    fn root(&self) -> &RootStore;
+    fn root_mut(&mut self) -> &mut RootStore;
+}
+
+pub(super) struct RootStore {
     pub(crate) state: State,
     renderer: Renderer,
     pub(crate) highlighter: Highlighter,
@@ -23,7 +48,7 @@ pub(super) struct Store {
     pub(crate) history: History,
 }
 
-impl Store {
+impl RootStore {
     pub(super) fn new(rx: Receiver<Action>, renderer: Renderer) -> Self {
         let state = State::new();
         let highlighter = Highlighter::new(&state.buffer, &Language::Unknown);
@@ -66,9 +91,7 @@ impl Store {
             self.notify();
         }
     }
-}
 
-impl Store {
     fn scroll(&mut self) {
         let state = &mut self.state;
         let textarea_row = (state.size.1 - 2) as usize;
@@ -92,7 +115,7 @@ impl Store {
         self.state.cursor.col = min(self.state.cursor.col, max_col);
     }
 
-    fn create_record(&self) -> Record {
+    pub(crate) fn create_record(&self) -> Record {
         Record {
             buffer: self.state.buffer.clone(),
             cursor: self.state.cursor.clone(),
