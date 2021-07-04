@@ -1,4 +1,5 @@
-use crate::action::{ActionKind, EditKind, MovementKind};
+use super::action::EditKind;
+use crate::action::ActionKind;
 use crate::mode::Mode;
 use crate::selection::Selection;
 use crate::store::{RootStore, Store};
@@ -70,16 +71,16 @@ impl<'a> EditStore<'a> {
             let (from, to) = self.state().measure_selection(selection.clone());
             let yank = self.remove(from, to - from);
             self.root_mut().action(ActionKind::SetYank(yank).once());
-            self.root_mut().movement(MovementKind::MoveTo(from), 1);
+            self.root_mut().movement().move_to(from);
         }
     }
 
     pub(crate) fn append_yank(&mut self, count: usize) {
         let col = if self.state().yanked.ends_with('\n') {
-            self.root_mut().movement(MovementKind::CursorDown, 1);
+            self.root_mut().movement().cursor_down(1);
             0
         } else {
-            self.root_mut().movement(MovementKind::CursorRight, 1);
+            self.root_mut().movement().cursor_right(1);
             self.state().cursor.col
         };
 
@@ -122,8 +123,8 @@ impl<'a> EditStore<'a> {
             if let Mode::Insert(_, s) = &mut self.state_mut().mode {
                 s.push('\n');
             }
-            self.root_mut().movement(MovementKind::CursorDown, 1);
-            self.root_mut().movement(MovementKind::CursorLineHead, 1);
+            self.root_mut().movement().cursor_down(1);
+            self.root_mut().movement().cursor_line_head();
         }
     }
 
@@ -137,7 +138,7 @@ impl<'a> EditStore<'a> {
                 s.push(c);
             }
             self.insert(to, &c.to_string());
-            self.root_mut().movement(MovementKind::CursorRight, 1);
+            self.root_mut().movement().cursor_right(1);
             self.history_mut().pop();
         }
     }
@@ -149,8 +150,7 @@ impl<'a> EditStore<'a> {
             .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
         for _ in 0..count {
             self.insert(to, &s);
-            self.root_mut()
-                .movement(MovementKind::CursorRight, s.chars().count());
+            self.root_mut().movement().cursor_right(s.chars().count());
             self.history_mut().pop();
         }
     }

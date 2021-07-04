@@ -19,6 +19,7 @@ mod highlight;
 mod history;
 mod language;
 mod mode;
+mod movement;
 mod renderer;
 mod selection;
 mod state;

@@ -1,5 +1,5 @@
 mod action;
 mod store;
 
-pub(crate) use action::ActionKind;
+pub(crate) use action::EditKind;
 pub(super) use store::EditStore;

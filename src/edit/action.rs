@@ -1,7 +1,7 @@
 use crate::selection::Selection;
 
 #[derive(Clone, Debug, PartialEq)]
-pub(crate) enum ActionKind {
+pub(crate) enum EditKind {
     LineBreak,
     InsertChar(char),
     RemoveChar,

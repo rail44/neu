@@ -2,8 +2,8 @@ use std::env::current_dir;
 use std::ffi::OsString;
 use std::fs;
 
-use crate::action::EditKind;
 use crate::buffer::Buffer;
+use crate::edit::EditKind;
 use crate::mode::Mode;
 use crate::selection::{Selection, SelectionKind};
 

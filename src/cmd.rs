@@ -8,7 +8,9 @@ use nom::{
     IResult,
 };
 
-use crate::action::{Action, ActionKind, EditKind, MovementKind};
+use crate::action::{Action, ActionKind};
+use crate::edit::EditKind;
+use crate::movement::MovementKind;
 use crate::selection::{Selection, SelectionKind};
 
 fn edit(input: &str) -> IResult<&str, ActionKind> {

@@ -1,10 +1,11 @@
-use crate::action::{Action, ActionKind, EditKind, MovementKind};
-use crate::compute::{CursorView, MatchPositions, Reactor};
-use crate::edit::EditStore;
+use crate::action::{Action, ActionKind};
+use crate::compute::Reactor;
+use crate::edit::{EditKind, EditStore};
 use crate::highlight::Highlighter;
 use crate::history::{History, Record};
 use crate::language::Language;
 use crate::mode::{InsertKind, Mode};
+use crate::movement::MovementStore;
 use crate::renderer::Renderer;
 use crate::state::State;
 
@@ -33,6 +34,14 @@ pub(crate) trait Store {
 
     fn history_mut(&mut self) -> &mut History {
         &mut self.root_mut().history
+    }
+
+    fn reactor(&self) -> &Reactor {
+        &self.root().reactor
+    }
+
+    fn reactor_mut(&mut self) -> &mut Reactor {
+        &mut self.root_mut().reactor
     }
 
     fn root(&self) -> &RootStore;
@@ -131,155 +140,18 @@ impl RootStore {
         self.renderer.render(&mut self.reactor, highlights);
     }
 
-    fn move_col(&mut self, col: usize) {
-        self.state.cursor.col = col;
-        self.state.max_column = col;
-    }
-
     fn edit(&mut self) -> EditStore {
         EditStore::new(self)
     }
 
-    pub(crate) fn movement(&mut self, movement: MovementKind, count: usize) {
-        let state = &mut self.state;
-        use MovementKind::*;
-        match movement {
-            CursorLeft => {
-                self.move_col(self.state.cursor.col.saturating_sub(count));
-            }
-            CursorDown => {
-                state.cursor.row += count;
-                state.cursor.row = min(
-                    state.buffer.count_lines().saturating_sub(1),
-                    state.cursor.row,
-                );
-                state.cursor.col = state.max_column;
-            }
-            CursorUp => {
-                state.cursor.row = state.cursor.row.saturating_sub(count);
-                state.cursor.col = state.max_column;
-            }
-            CursorRight => {
-                self.move_col(self.state.cursor.col + count);
-            }
-            CursorLineHead => {
-                self.move_col(0);
-            }
-            MoveTo(pos) => {
-                let result = state.buffer.get_cursor_by_offset(pos);
-                state.cursor.row = result.0;
-                self.move_col(result.1);
-            }
-            ForwardWord => {
-                let word_offset = state
-                    .buffer
-                    .count_forward_word(state.cursor.col, state.cursor.row);
-                self.movement(MovementKind::CursorRight, word_offset * count);
-            }
-            BackWord => {
-                let word_offset = state
-                    .buffer
-                    .count_back_word(state.cursor.col, state.cursor.row);
-                self.movement(MovementKind::CursorLeft, word_offset * count);
-            }
-            MoveLine => {
-                state.cursor.row = min(count, state.buffer.count_lines()) - 1;
-            }
-            MoveToTail => {
-                state.cursor.row = state.buffer.count_lines() - 1;
-            }
-            ScollScreenUp => {
-                let textarea_row = (state.size.1 - 2) as usize;
-                state.row_offset = state.row_offset.saturating_sub(textarea_row);
-                state.cursor.row = min(state.cursor.row, state.row_offset + textarea_row - 1);
-            }
-            ScollScreenDown => {
-                let textarea_row = (state.size.1 - 2) as usize;
-                state.row_offset += textarea_row;
-                state.row_offset = min(
-                    state.buffer.count_lines().saturating_sub(1),
-                    state.row_offset,
-                );
-                state.cursor.row = state.row_offset;
-            }
-            MoveToLineTail => {
-                self.movement(
-                    MovementKind::MoveTo(self.state.current_line().1.saturating_sub(2)),
-                    count,
-                );
-            }
-            MoveToLineIndentHead => {
-                self.movement(
-                    MovementKind::MoveTo(
-                        self.state
-                            .buffer
-                            .current_line_indent_head(self.state.cursor.row),
-                    ),
-                    count,
-                );
-            }
-            MoveAsSeenOnView => {
-                let pos = self.reactor.compute::<CursorView>().0;
-                self.state.cursor.row = pos.0;
-                self.state.cursor.col = pos.1;
-            }
-            GoToNextMatch => {
-                let matches = self.reactor.compute::<MatchPositions>().0;
-                let cursor = &mut self.state.cursor;
-
-                if matches.is_empty() {
-                    return;
-                }
-
-                for (pos, _) in &matches {
-                    if pos.0 == cursor.row && pos.1 > cursor.col {
-                        cursor.row = pos.0;
-                        cursor.col = pos.1;
-                        return;
-                    }
-
-                    if pos.0 > cursor.row {
-                        cursor.row = pos.0;
-                        cursor.col = pos.1;
-                        return;
-                    }
-                }
-                let pos = matches.first().unwrap().0;
-                cursor.row = pos.0;
-                cursor.col = pos.1;
-            }
-            GoToPrevMatch => {
-                let matches = self.reactor.compute::<MatchPositions>().0;
-                let cursor = &mut self.state.cursor;
-
-                if matches.is_empty() {
-                    return;
-                }
-
-                for (pos, _) in matches.iter().rev() {
-                    if pos.0 == cursor.row && pos.1 < cursor.col {
-                        cursor.row = pos.0;
-                        cursor.col = pos.1;
-                        return;
-                    }
-
-                    if pos.0 < cursor.row {
-                        cursor.row = pos.0;
-                        cursor.col = pos.1;
-                        return;
-                    }
-                }
-                let pos = matches.last().unwrap().0;
-                cursor.row = pos.0;
-                cursor.col = pos.1;
-            }
-        }
+    pub(crate) fn movement(&mut self) -> MovementStore {
+        MovementStore::new(self)
     }
 
     pub(crate) fn action(&mut self, action: Action) -> bool {
         use ActionKind::*;
         match action.kind {
-            Movement(m) => self.movement(m, action.count),
+            Movement(m) => self.movement().action(m, action.count),
             Edit(e) => self.edit().action(e, action.count),
             IntoNormalMode => {
                 let mode = mem::replace(&mut self.state.mode, Mode::Normal(String::new()));
@@ -299,7 +171,7 @@ impl RootStore {
             IntoAppendMode => {
                 self.history.push(self.create_record());
                 self.action(IntoInsertMode.once());
-                self.movement(MovementKind::CursorRight, 1);
+                self.movement().cursor_right(1);
             }
             IntoEditMode(selection) => {
                 self.edit().remove_selection(&selection, 1);

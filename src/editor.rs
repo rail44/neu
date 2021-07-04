@@ -3,10 +3,12 @@ use std::io::stdin;
 use termion::event::Key;
 use termion::input::TermRead;
 
-use crate::action::{Action, ActionKind, EditKind, MovementKind};
+use crate::action::{Action, ActionKind};
 use crate::cmd;
 use crate::cmdline;
+use crate::edit::EditKind;
 use crate::mode::Mode;
+use crate::movement::MovementKind;
 
 use flume::Sender;
 
@@ -124,7 +126,7 @@ impl Editor {
                     match k.unwrap() {
                         Key::Char('\n') => {
                             self.store
-                                .send(MovementKind::MoveAsSeenOnView.once())
+                                .send(ActionKind::from(MovementKind::MoveAsSeenOnView).once())
                                 .unwrap();
                             self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
                         }
