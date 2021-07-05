@@ -3,4 +3,3 @@ pub(super) struct Position {
     pub(super) row: usize,
     pub(super) col: usize,
 }
-

@@ -7,7 +7,6 @@ use backtrace::Backtrace;
 use clap::{crate_authors, crate_version, Clap};
 use dirs::home_dir;
 
-mod position;
 mod action;
 mod buffer;
 mod cmd;
@@ -21,6 +20,7 @@ mod history;
 mod language;
 mod mode;
 mod movement;
+mod position;
 mod renderer;
 mod selection;
 mod state;

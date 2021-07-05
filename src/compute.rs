@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
 use crate::mode::Mode;
-use crate::state::State;
 use crate::position::Position;
+use crate::state::State;
 use core::cmp::min;
 use hashbrown::HashMap;
 use regex::Regex;
@@ -296,7 +296,10 @@ impl Compute for MatchPositions {
                 let start_position = source.1.get_cursor_by_byte(range.start);
                 let end_position = source.1.get_cursor_by_byte(range.end);
                 (
-                    Position { row: start_position.0, col: start_position.1},
+                    Position {
+                        row: start_position.0,
+                        col: start_position.1,
+                    },
                     end_position.1 - start_position.1,
                 )
             })
@@ -321,8 +324,12 @@ impl Compute for MatchPositionsInView {
                 break;
             }
             result.push((
-                    Position{ row: pos.row - line_range.start, col  :pos.col},
-                    *l));
+                Position {
+                    row: pos.row - line_range.start,
+                    col: pos.col,
+                },
+                *l,
+            ));
         }
         Self(result)
     }
@@ -335,15 +342,21 @@ impl Compute for CursorView {
     type Source = (Cursor, Mode, MatchPositions);
 
     fn compute(source: &Self::Source) -> Self {
-        let cursor = &source.0. 0;
+        let cursor = &source.0 .0;
         if source.1 != Mode::Search {
-            return CursorView(Position { row: cursor.row, col :cursor.col});
+            return CursorView(Position {
+                row: cursor.row,
+                col: cursor.col,
+            });
         }
 
         let matches = &source.2 .0;
 
         if matches.is_empty() {
-            return CursorView(Position { row: cursor.row, col: cursor.col});
+            return CursorView(Position {
+                row: cursor.row,
+                col: cursor.col,
+            });
         }
 
         for (pos, _) in matches {

@@ -1,10 +1,10 @@
 use crate::buffer::Buffer;
-use crate::position::Position;
 use crate::compute::{
     Compute, CurrentLine, CursorView, LineRange, MatchPositionsInView, MaxLineDigit, Reactor,
     RowOffset, SearchPattern, TerminalHeight,
 };
 use crate::mode::Mode;
+use crate::position::Position;
 use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use std::ops::Range;

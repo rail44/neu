@@ -2,10 +2,10 @@ use std::env::current_dir;
 use std::ffi::OsString;
 use std::fs;
 
-use crate::position::Position;
 use crate::buffer::Buffer;
 use crate::edit::EditKind;
 use crate::mode::Mode;
+use crate::position::Position;
 use crate::selection::{Selection, SelectionKind};
 
 use termion::terminal_size;
