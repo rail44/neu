@@ -1,3 +1,4 @@
+use core::ops::Range;
 use std::env::current_dir;
 use std::ffi::OsString;
 use std::fs;
@@ -61,15 +62,15 @@ impl State {
         self.buffer.count_forward_word(self.cursor)
     }
 
-    pub(super) fn current_line(&self) -> (usize, usize) {
+    pub(super) fn current_line(&self) -> Range<usize> {
         self.buffer.line_range(self.cursor.row)
     }
 
-    pub(super) fn current_line_remain(&self) -> (usize, usize) {
+    pub(super) fn current_line_remain(&self) -> Range<usize> {
         self.buffer.line_remain(self.cursor)
     }
 
-    pub(super) fn measure_selection(&self, s: Selection) -> (usize, usize) {
+    pub(super) fn measure_selection(&self, s: Selection) -> Range<usize> {
         let cursor_offset = self.get_cursor_offset();
 
         use SelectionKind::*;
@@ -92,16 +93,16 @@ impl State {
             }
             ForwardWord => {
                 let count = self.count_word_forward();
-                (cursor_offset, cursor_offset + count)
+                cursor_offset..cursor_offset + count
             }
             BackWord => {
                 let count = self.count_word_back();
-                (cursor_offset - count, cursor_offset)
+                cursor_offset - count..cursor_offset
             }
             Word => {
                 let forward_count = self.count_word_forward();
                 let back_count = self.count_word_back();
-                (cursor_offset - back_count, cursor_offset + forward_count)
+                cursor_offset - back_count..cursor_offset + forward_count
             }
             Line => self.current_line(),
             LineRemain => self.current_line_remain(),

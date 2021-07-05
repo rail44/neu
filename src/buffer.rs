@@ -1,5 +1,5 @@
 use crate::position::Position;
-use core::ops::RangeBounds;
+use core::ops::{Range, RangeBounds};
 use std::borrow::Cow;
 
 use ropey::{Rope, RopeSlice};
@@ -127,16 +127,16 @@ impl Buffer {
         i
     }
 
-    pub(super) fn line_remain(&self, pos: Position) -> (usize, usize) {
+    pub(super) fn line_remain(&self, pos: Position) -> Range<usize> {
         let offset = self.get_offset_by_position(pos);
         let end = self.0.line_to_char(pos.row + 1);
-        (offset, end - 1)
+        offset..end - 1
     }
 
-    pub(super) fn line_range(&self, row: usize) -> (usize, usize) {
+    pub(super) fn line_range(&self, row: usize) -> Range<usize> {
         let start = self.0.line_to_char(row);
         let end = self.0.line_to_char(row + 1);
-        (start, end)
+        start..end
     }
 
     pub(super) fn current_line_indent_head(&self, row: usize) -> usize {

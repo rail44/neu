@@ -213,8 +213,8 @@ impl RootStore {
                 _ => (),
             },
             Yank(selection) => {
-                let (from, to) = self.state.measure_selection(selection);
-                let yank = self.state.buffer.slice(from..to).as_str().to_string();
+                let range = self.state.measure_selection(selection);
+                let yank = self.state.buffer.slice(range).as_str().to_string();
                 self.action(SetYank(yank).once());
             }
             Repeat => {

@@ -4,6 +4,7 @@ use crate::mode::Mode;
 use crate::position::Position;
 use crate::selection::Selection;
 use crate::store::{RootStore, Store};
+use core::ops::Range;
 use tree_sitter::{InputEdit, Point};
 
 pub(crate) struct EditStore<'a> {
@@ -40,15 +41,15 @@ impl<'a> EditStore<'a> {
         self.state_mut().buffer.insert(pos, s);
     }
 
-    fn remove(&mut self, from: usize, count: usize) -> String {
-        let to = from + count;
-        let s = self.state_mut().buffer.remove(from..to);
+    fn remove(&mut self, range: Range<usize>) -> String {
+        let start = range.start;
+        let s = self.state_mut().buffer.remove(range);
 
         let byte_l = s.bytes().count();
         let edit = InputEdit {
-            start_byte: from,
-            old_end_byte: from + byte_l,
-            new_end_byte: from,
+            start_byte: start,
+            old_end_byte: start + byte_l,
+            new_end_byte: start,
             start_position: Point::default(),
             old_end_position: Point::default(),
             new_end_position: Point::default(),
@@ -59,16 +60,17 @@ impl<'a> EditStore<'a> {
 
     pub(crate) fn remove_char(&mut self, count: usize) {
         let start = self.state().get_cursor_offset();
-        let yank = self.remove(start, count);
+        let yank = self.remove(start..start + count);
         self.root_mut().action(ActionKind::SetYank(yank).once());
     }
 
     pub(crate) fn remove_selection(&mut self, selection: &Selection, count: usize) {
         for _ in 0..count {
-            let (from, to) = self.state().measure_selection(selection.clone());
-            let yank = self.remove(from, to - from);
+            let range = self.state().measure_selection(selection.clone());
+            let start = range.start;
+            let yank = self.remove(range);
             self.root_mut().action(ActionKind::SetYank(yank).once());
-            self.root_mut().movement().move_to(from);
+            self.root_mut().movement().move_to(start);
         }
     }
 
