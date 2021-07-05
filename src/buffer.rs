@@ -1,3 +1,4 @@
+use crate::position::Position;
 use core::ops::RangeBounds;
 use std::borrow::Cow;
 
@@ -33,9 +34,9 @@ impl CharKind {
 pub(super) struct Buffer(Rope);
 
 impl Buffer {
-    pub(super) fn get_offset_by_cursor(&self, col: usize, row: usize) -> usize {
-        let offset = self.0.line_to_char(row);
-        offset + col
+    pub(super) fn get_offset_by_position(&self, pos: Position) -> usize {
+        let offset = self.0.line_to_char(pos.row);
+        offset + pos.col
     }
 
     pub(super) fn row_len(&self, row: usize) -> usize {
@@ -56,13 +57,13 @@ impl Buffer {
         self.0.len_lines().saturating_sub(1)
     }
 
-    pub(super) fn insert(&mut self, col: usize, row: usize, s: &str) {
-        let i = self.get_offset_by_cursor(col, row);
+    pub(super) fn insert(&mut self, pos: Position, s: &str) {
+        let i = self.get_offset_by_position(pos);
         self.0.insert(i, s);
     }
 
-    pub(super) fn count_forward_word(&self, col: usize, row: usize) -> usize {
-        let start = self.get_offset_by_cursor(col, row);
+    pub(super) fn count_forward_word(&self, pos: Position) -> usize {
+        let start = self.get_offset_by_position(pos);
         let mut chars = self.0.chars_at(start);
 
         let c = chars.next();
@@ -96,8 +97,8 @@ impl Buffer {
         i
     }
 
-    pub(super) fn count_back_word(&self, col: usize, row: usize) -> usize {
-        let start = self.get_offset_by_cursor(col, row);
+    pub(super) fn count_back_word(&self, pos: Position) -> usize {
+        let start = self.get_offset_by_position(pos);
         let mut chars = self.0.chars_at(start);
 
         let mut i = 0;
@@ -126,13 +127,13 @@ impl Buffer {
         i
     }
 
-    pub(super) fn current_line_remain(&self, col: usize, row: usize) -> (usize, usize) {
-        let offset = self.get_offset_by_cursor(col, row);
-        let end = self.0.line_to_char(row + 1);
+    pub(super) fn line_remain(&self, pos: Position) -> (usize, usize) {
+        let offset = self.get_offset_by_position(pos);
+        let end = self.0.line_to_char(pos.row + 1);
         (offset, end - 1)
     }
 
-    pub(super) fn current_line(&self, row: usize) -> (usize, usize) {
+    pub(super) fn line_range(&self, row: usize) -> (usize, usize) {
         let start = self.0.line_to_char(row);
         let end = self.0.line_to_char(row + 1);
         (start, end)
@@ -166,16 +167,22 @@ impl Buffer {
         (&self.0).into()
     }
 
-    pub(super) fn get_cursor_by_offset(&self, offset: usize) -> (usize, usize) {
+    pub(super) fn get_position_by_offset(&self, offset: usize) -> Position {
         let row = self.0.char_to_line(offset);
         let row_offset = self.0.line_to_char(row);
-        (row, offset - row_offset)
+        Position {
+            row,
+            col: offset - row_offset,
+        }
     }
 
-    pub(super) fn get_cursor_by_byte(&self, i: usize) -> (usize, usize) {
+    pub(super) fn get_cursor_by_byte(&self, i: usize) -> Position {
         let row = self.0.byte_to_line(i);
         let row_byte = self.0.line_to_byte(row);
-        (row, i - row_byte)
+        Position {
+            row,
+            col: i - row_byte,
+        }
     }
 
     pub(super) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {

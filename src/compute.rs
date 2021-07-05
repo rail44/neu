@@ -297,10 +297,10 @@ impl Compute for MatchPositions {
                 let end_position = source.1.get_cursor_by_byte(range.end);
                 (
                     Position {
-                        row: start_position.0,
-                        col: start_position.1,
+                        row: start_position.row,
+                        col: start_position.col,
                     },
-                    end_position.1 - start_position.1,
+                    end_position.col - start_position.col,
                 )
             })
             .collect();

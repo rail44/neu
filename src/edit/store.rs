@@ -1,6 +1,7 @@
 use super::action::EditKind;
 use crate::action::ActionKind;
 use crate::mode::Mode;
+use crate::position::Position;
 use crate::selection::Selection;
 use crate::store::{RootStore, Store};
 use tree_sitter::{InputEdit, Point};
@@ -25,7 +26,7 @@ impl<'a> EditStore<'a> {
     }
 
     fn insert(&mut self, to: usize, s: &str) {
-        let (row, col) = self.state().buffer.get_cursor_by_offset(to);
+        let pos = self.state().buffer.get_position_by_offset(to);
         let byte_l = s.bytes().count();
         let edit = InputEdit {
             start_byte: to,
@@ -36,7 +37,7 @@ impl<'a> EditStore<'a> {
             new_end_position: Point::default(),
         };
         self.highlighter_mut().edit_tree(&edit);
-        self.state_mut().buffer.insert(col, row, s);
+        self.state_mut().buffer.insert(pos, s);
     }
 
     fn remove(&mut self, from: usize, count: usize) -> String {
@@ -57,11 +58,7 @@ impl<'a> EditStore<'a> {
     }
 
     pub(crate) fn remove_char(&mut self, count: usize) {
-        let cursor = &self.state().cursor;
-        let start = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(cursor.col, cursor.row);
+        let start = self.state().get_cursor_offset();
         let yank = self.remove(start, count);
         self.root_mut().action(ActionKind::SetYank(yank).once());
     }
@@ -84,10 +81,10 @@ impl<'a> EditStore<'a> {
             self.state().cursor.col
         };
 
-        let to = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(col, self.state().cursor.row);
+        let to = self.state().buffer.get_offset_by_position(Position {
+            col,
+            row: self.state().cursor.row,
+        });
 
         let s = self.state().yanked.clone();
         for _ in 0..count {
@@ -102,10 +99,10 @@ impl<'a> EditStore<'a> {
             self.state().cursor.col
         };
 
-        let to = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(col, self.state().cursor.row);
+        let to = self.state().buffer.get_offset_by_position(Position {
+            col,
+            row: self.state().cursor.row,
+        });
         let s = self.state().yanked.clone();
         for _ in 0..count {
             self.insert(to, &s);
@@ -113,10 +110,7 @@ impl<'a> EditStore<'a> {
     }
 
     pub(crate) fn line_break(&mut self, count: usize) {
-        let to = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        let to = self.state().get_cursor_offset();
 
         for _ in 0..count {
             self.insert(to, "\n");
@@ -129,10 +123,7 @@ impl<'a> EditStore<'a> {
     }
 
     pub(crate) fn insert_char(&mut self, c: char, count: usize) {
-        let to = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        let to = self.state().get_cursor_offset();
         for _ in 0..count {
             if let Mode::Insert(_, s) = &mut self.state_mut().mode {
                 s.push(c);
@@ -144,10 +135,7 @@ impl<'a> EditStore<'a> {
     }
 
     pub(crate) fn insert_string(&mut self, s: &str, count: usize) {
-        let to = self
-            .state()
-            .buffer
-            .get_offset_by_cursor(self.state().cursor.col, self.state().cursor.row);
+        let to = self.state().get_cursor_offset();
         for _ in 0..count {
             self.insert(to, &s);
             self.root_mut().movement().cursor_right(s.chars().count());

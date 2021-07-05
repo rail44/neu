@@ -56,25 +56,19 @@ impl<'a> MovementStore<'a> {
         self.move_col(0);
     }
 
-    pub(crate) fn move_to(&mut self, pos: usize) {
-        let result = self.state().buffer.get_cursor_by_offset(pos);
-        self.state_mut().cursor.row = result.0;
-        self.move_col(result.1);
+    pub(crate) fn move_to(&mut self, offset: usize) {
+        let result = self.state().buffer.get_position_by_offset(offset);
+        self.state_mut().cursor.row = result.row;
+        self.move_col(result.col);
     }
 
     fn forward_word(&mut self, count: usize) {
-        let word_offset = self
-            .state()
-            .buffer
-            .count_forward_word(self.state().cursor.col, self.state().cursor.row);
+        let word_offset = self.state().count_word_forward();
         self.cursor_right(word_offset * count);
     }
 
     fn back_word(&mut self, count: usize) {
-        let word_offset = self
-            .state()
-            .buffer
-            .count_back_word(self.state().cursor.col, self.state().cursor.row);
+        let word_offset = self.state().count_word_back();
         self.cursor_left(word_offset * count);
     }
 
