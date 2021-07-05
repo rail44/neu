@@ -119,8 +119,8 @@ impl<'a> MovementStore<'a> {
 
     fn move_as_seen_on_view(&mut self) {
         let pos = self.reactor_mut().compute::<CursorView>().0;
-        self.state_mut().cursor.row = pos.0;
-        self.state_mut().cursor.col = pos.1;
+        self.state_mut().cursor.row = pos.row;
+        self.state_mut().cursor.col = pos.col;
     }
 
     fn go_to_next_match(&mut self) {
@@ -132,21 +132,21 @@ impl<'a> MovementStore<'a> {
         }
 
         for (pos, _) in &matches {
-            if pos.0 == cursor.row && pos.1 > cursor.col {
-                cursor.row = pos.0;
-                cursor.col = pos.1;
+            if pos.row == cursor.row && pos.col > cursor.col {
+                cursor.row = pos.row;
+                cursor.col = pos.col;
                 return;
             }
 
-            if pos.0 > cursor.row {
-                cursor.row = pos.0;
-                cursor.col = pos.1;
+            if pos.row > cursor.row {
+                cursor.row = pos.row;
+                cursor.col = pos.col;
                 return;
             }
         }
         let pos = matches.first().unwrap().0;
-        cursor.row = pos.0;
-        cursor.col = pos.1;
+        cursor.row = pos.row;
+        cursor.col = pos.col;
     }
 
     fn go_to_prev_match(&mut self) {
@@ -158,21 +158,21 @@ impl<'a> MovementStore<'a> {
         }
 
         for (pos, _) in matches.iter().rev() {
-            if pos.0 == cursor.row && pos.1 < cursor.col {
-                cursor.row = pos.0;
-                cursor.col = pos.1;
+            if pos.row == cursor.row && pos.col < cursor.col {
+                cursor.row = pos.row;
+                cursor.col = pos.col;
                 return;
             }
 
-            if pos.0 < cursor.row {
-                cursor.row = pos.0;
-                cursor.col = pos.1;
+            if pos.row < cursor.row {
+                cursor.row = pos.row;
+                cursor.col = pos.col;
                 return;
             }
         }
         let pos = matches.last().unwrap().0;
-        cursor.row = pos.0;
-        cursor.col = pos.1;
+        cursor.row = pos.row;
+        cursor.col = pos.col;
     }
 
     pub(crate) fn action(&mut self, movement: MovementKind, count: usize) {

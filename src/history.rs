@@ -1,11 +1,11 @@
 use crate::buffer::Buffer;
-use crate::state::Cursor;
+use crate::position::Position;
 use tree_sitter::Tree;
 
 #[derive(Debug)]
 pub(super) struct Record {
     pub(super) buffer: Buffer,
-    pub(super) cursor: Cursor,
+    pub(super) cursor: Position,
     pub(super) tree: Option<Tree>,
 }
 

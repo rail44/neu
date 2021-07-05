@@ -1,4 +1,5 @@
 use crate::buffer::Buffer;
+use crate::position::Position;
 use crate::compute::{
     Compute, CurrentLine, CursorView, LineRange, MatchPositionsInView, MaxLineDigit, Reactor,
     RowOffset, SearchPattern, TerminalHeight,
@@ -16,7 +17,7 @@ struct TextAreaProps {
     line_range: Range<usize>,
     buffer: Buffer,
     max_line_digit: usize,
-    match_positions: Vec<((usize, usize), usize)>,
+    match_positions: Vec<(Position, usize)>,
 }
 
 impl Compute for TextAreaProps {
@@ -49,7 +50,7 @@ impl Compute for LineNumberProps {
 
 #[derive(PartialEq, Clone, Debug)]
 struct CursorProps {
-    cursor: (usize, usize),
+    cursor: Position,
     current_line: String,
     max_line_digit: usize,
     row_offset: usize,
@@ -169,18 +170,18 @@ impl Renderer {
 
         let match_positions = props.match_positions;
         for (position, length) in match_positions {
-            let line = props.buffer.line(position.0 + props.line_range.start);
-            let s: String = line.chars().take(position.1 + length).collect();
-            let width = UnicodeWidthStr::width(&s[..min(s.len() - 1, position.1)]);
+            let line = props.buffer.line(position.row + props.line_range.start);
+            let s: String = line.chars().take(position.col + length).collect();
+            let width = UnicodeWidthStr::width(&s[..min(s.len() - 1, position.col)]);
             write!(
                 self.stdout,
                 "{}{}{}{}",
                 termion::cursor::Goto(
                     max_line_digit as u16 + 2 + width as u16,
-                    position.0 as u16 + 1
+                    position.row as u16 + 1
                 ),
                 termion::color::Bg(termion::color::Green),
-                &s[min(s.len(), position.1)..],
+                &s[min(s.len(), position.col)..],
                 termion::color::Bg(termion::color::Reset)
             )
             .unwrap();
@@ -246,8 +247,8 @@ impl Renderer {
     fn render_cursor(&mut self, props: CursorProps) {
         let cursor = props.cursor;
         let row_offset = props.row_offset;
-        let col = cursor.1;
-        let row = cursor.0 - row_offset;
+        let col = cursor.col;
+        let row = cursor.row - row_offset;
 
         let current_line = props.current_line;
         let s: String = current_line

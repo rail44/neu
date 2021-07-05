@@ -1,6 +1,7 @@
 use crate::buffer::Buffer;
 use crate::mode::Mode;
-use crate::state::{Cursor, State};
+use crate::state::State;
+use crate::position::Position;
 use core::cmp::min;
 use hashbrown::HashMap;
 use regex::Regex;
@@ -209,14 +210,16 @@ pub(super) struct CursorRow(pub(super) usize);
 impl Compute for CursorRow {
     type Source = Cursor;
     fn compute(source: &Self::Source) -> Self {
-        Self(source.row)
+        Self(source.0.row)
     }
 }
 
+#[derive(PartialEq, Clone, Debug)]
+pub(super) struct Cursor(pub(super) Position);
 impl Compute for Cursor {
     type Source = State;
     fn compute(source: &Self::Source) -> Self {
-        source.cursor.clone()
+        Self(source.cursor.clone())
     }
 }
 
@@ -272,7 +275,7 @@ impl Compute for SearchPattern {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct MatchPositions(pub(super) Vec<((usize, usize), usize)>);
+pub(super) struct MatchPositions(pub(super) Vec<(Position, usize)>);
 
 impl Compute for MatchPositions {
     type Source = (SearchPattern, Buffer);
@@ -293,7 +296,7 @@ impl Compute for MatchPositions {
                 let start_position = source.1.get_cursor_by_byte(range.start);
                 let end_position = source.1.get_cursor_by_byte(range.end);
                 (
-                    (start_position.0, start_position.1),
+                    Position { row: start_position.0, col: start_position.1},
                     end_position.1 - start_position.1,
                 )
             })
@@ -303,7 +306,7 @@ impl Compute for MatchPositions {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct MatchPositionsInView(pub(super) Vec<((usize, usize), usize)>);
+pub(super) struct MatchPositionsInView(pub(super) Vec<(Position, usize)>);
 
 impl Compute for MatchPositionsInView {
     type Source = (MatchPositions, LineRange);
@@ -311,42 +314,44 @@ impl Compute for MatchPositionsInView {
         let mut result = Vec::new();
         let line_range = &source.1 .0;
         for (pos, l) in &source.0 .0 {
-            if line_range.start > pos.0 {
+            if line_range.start > pos.row {
                 continue;
             }
-            if line_range.end <= pos.0 {
+            if line_range.end <= pos.row {
                 break;
             }
-            result.push(((pos.0 - line_range.start, pos.1), *l));
+            result.push((
+                    Position{ row: pos.row - line_range.start, col  :pos.col},
+                    *l));
         }
         Self(result)
     }
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct CursorView(pub(super) (usize, usize));
+pub(super) struct CursorView(pub(super) Position);
 
 impl Compute for CursorView {
     type Source = (Cursor, Mode, MatchPositions);
 
     fn compute(source: &Self::Source) -> Self {
-        let cursor = &source.0;
+        let cursor = &source.0. 0;
         if source.1 != Mode::Search {
-            return CursorView((cursor.row, cursor.col));
+            return CursorView(Position { row: cursor.row, col :cursor.col});
         }
 
         let matches = &source.2 .0;
 
         if matches.is_empty() {
-            return CursorView((cursor.row, cursor.col));
+            return CursorView(Position { row: cursor.row, col: cursor.col});
         }
 
         for (pos, _) in matches {
-            if pos.0 == cursor.row && pos.1 >= cursor.col {
+            if pos.row == cursor.row && pos.col >= cursor.col {
                 return CursorView(*pos);
             }
 
-            if pos.0 > cursor.row {
+            if pos.row > cursor.row {
                 return CursorView(*pos);
             }
         }
