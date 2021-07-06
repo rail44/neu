@@ -28,7 +28,7 @@ impl<'a> MovementStore<'a> {
         self.state_mut().max_column = col;
     }
 
-    fn cursor_left(&mut self, count: usize) {
+    pub(crate) fn cursor_left(&mut self, count: usize) {
         self.move_col(self.state().cursor.col.saturating_sub(count));
     }
 

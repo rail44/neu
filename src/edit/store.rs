@@ -147,6 +147,7 @@ impl<'a> EditStore<'a> {
     pub(crate) fn edit(&mut self, selection: &Selection, s: &str) {
         self.remove_selection(selection, 1);
         self.insert_string(s, 1);
+        self.root_mut().movement().cursor_left(1);
     }
 
     pub(crate) fn action(&mut self, edit: EditKind, count: usize) {

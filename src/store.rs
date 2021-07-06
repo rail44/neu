@@ -157,6 +157,7 @@ impl RootStore {
                 let mode = mem::replace(&mut self.state.mode, Mode::Normal(String::new()));
 
                 if let Mode::Insert(k, s) = mode {
+                    self.movement().cursor_left(1);
                     let edit = match k {
                         InsertKind::Insert => EditKind::InsertString(s),
                         InsertKind::Edit(selection) => EditKind::Edit(selection, s),
