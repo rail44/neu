@@ -127,7 +127,7 @@ impl RootStore {
     pub(crate) fn create_record(&self) -> Record {
         Record {
             buffer: self.state.buffer.clone(),
-            cursor: self.state.cursor.clone(),
+            cursor: self.state.cursor,
             tree: self.highlighter.tree().cloned(),
         }
     }

@@ -75,7 +75,7 @@ impl Buffer {
         let k = CharKind::from_char(&c);
 
         let mut i = 0;
-        while let Some(c) = chars.next() {
+        for c in chars {
             i += 1;
             if CharKind::from_char(&c) != k {
                 break;

@@ -219,7 +219,7 @@ pub(super) struct Cursor(pub(super) Position);
 impl Compute for Cursor {
     type Source = State;
     fn compute(source: &Self::Source) -> Self {
-        Self(source.cursor.clone())
+        Self(source.cursor)
     }
 }
 
