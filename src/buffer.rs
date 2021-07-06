@@ -62,7 +62,7 @@ impl Buffer {
         self.0.insert(i, s);
     }
 
-    pub(super) fn count_forward_word(&self, pos: Position) -> usize {
+    pub(super) fn count_word_end(&self, pos: Position) -> usize {
         let start = self.get_offset_by_position(pos);
         let mut chars = self.0.chars_at(start);
 
@@ -77,15 +77,18 @@ impl Buffer {
         let mut i = 0;
         while let Some(c) = chars.next() {
             i += 1;
-            if c.is_ascii_whitespace() {
-                break;
-            }
-
             if CharKind::from_char(&c) != k {
                 break;
             }
         }
-        chars.prev();
+        i
+    }
+
+    pub(super) fn count_forward_word(&self, pos: Position) -> usize {
+        let word_end = self.count_word_end(pos);
+        let start = self.get_offset_by_position(pos);
+        let chars = self.0.chars_at(start + word_end);
+        let mut i = word_end;
 
         for c in chars {
             if !c.is_ascii_whitespace() {

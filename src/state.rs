@@ -54,6 +54,10 @@ impl State {
         self.buffer.get_offset_by_position(self.cursor)
     }
 
+    pub(super) fn count_word_end(&self) -> usize {
+        self.buffer.count_word_end(self.cursor)
+    }
+
     pub(super) fn count_word_back(&self) -> usize {
         self.buffer.count_back_word(self.cursor)
     }
@@ -90,6 +94,10 @@ impl State {
             Right => {
                 unimplemented!();
                 // self.store.do_send(store::CursorRight(cmd.count)).unwrap();
+            }
+            WordEnd => {
+                let count = self.count_word_end();
+                cursor_offset..cursor_offset + count
             }
             ForwardWord => {
                 let count = self.count_word_forward();

@@ -10,6 +10,7 @@ pub(super) enum SelectionKind {
     Down,
     Up,
     Right,
+    WordEnd,
     ForwardWord,
     BackWord,
     Word,

@@ -14,16 +14,14 @@ use crate::movement::MovementKind;
 use crate::selection::{Selection, SelectionKind};
 
 fn edit(input: &str) -> IResult<&str, ActionKind> {
+    use SelectionKind::*;
     alt((
-        map(tag("cc"), |_| {
-            ActionKind::IntoEditMode(SelectionKind::Line.once())
-        }),
+        map(tag("cw"), |_| ActionKind::IntoEditMode(WordEnd.once())),
+        map(tag("cc"), |_| ActionKind::IntoEditMode(Line.once())),
         map(pair(tag("c"), selection), |(_, s)| {
             ActionKind::IntoEditMode(s)
         }),
-        map(tag("C"), |_| {
-            ActionKind::IntoEditMode(SelectionKind::LineRemain.once())
-        }),
+        map(tag("C"), |_| ActionKind::IntoEditMode(LineRemain.once())),
     ))(input)
 }
 
