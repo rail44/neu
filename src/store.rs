@@ -70,7 +70,7 @@ impl RootStore {
             history: History::default(),
             reactor: Reactor::new(),
         };
-        store.notify();
+        store.refresh();
         store
     }
 
@@ -87,7 +87,7 @@ impl RootStore {
             reactor: Reactor::new(),
             state,
         };
-        store.notify();
+        store.refresh();
         store
     }
 
@@ -97,7 +97,7 @@ impl RootStore {
             if !self.action(action) {
                 break;
             }
-            self.notify();
+            self.refresh();
         }
     }
 
@@ -132,7 +132,7 @@ impl RootStore {
         }
     }
 
-    fn notify(&mut self) {
+    fn refresh(&mut self) {
         self.scroll();
         self.coerce_col();
         self.reactor.load_state(self.state.clone());
