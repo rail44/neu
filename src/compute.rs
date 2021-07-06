@@ -8,6 +8,7 @@ use regex::Regex;
 use std::any::{Any, TypeId};
 use std::ops::Range;
 
+#[derive(Clone, Debug)]
 struct Computed<C>
 where
     C: Compute,
@@ -87,7 +88,7 @@ impl Reactor {
     }
 }
 
-pub(super) trait ComputeWithReactor: PartialEq {
+pub(super) trait ComputeWithReactor: PartialEq + Clone {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self;
 }
 
@@ -101,16 +102,22 @@ where
     C: Compute,
 {
     fn compute_with_reactor(reactor: &mut Reactor) -> Self {
-        let source = reactor.compute();
         let computed = reactor.get_computed::<Self>();
-        if let Some(computed) = computed {
-            if reactor.generation() == computed.generation {
-                return computed.value.clone();
-            }
+        if computed.is_none() {
+            let source = reactor.compute();
+            let v = C::compute(&source);
+            reactor.insert_computed(v.clone(), source);
+            return v;
+        }
 
-            if source == computed.source {
-                return computed.value.clone();
-            }
+        let computed = computed.unwrap().clone();
+        if reactor.generation() == computed.generation {
+            return computed.value;
+        }
+
+        let source = reactor.compute::<C::Source>();
+        if source == computed.source {
+            return computed.value;
         }
 
         let v = C::compute(&source);
