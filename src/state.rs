@@ -66,6 +66,10 @@ impl State {
         self.buffer.count_forward_word(self.cursor)
     }
 
+    pub(super) fn count_word_start(&self) -> usize {
+        self.buffer.count_word_start(self.cursor)
+    }
+
     pub(super) fn current_line(&self) -> Range<usize> {
         self.buffer.line_range(self.cursor.row)
     }
@@ -108,9 +112,9 @@ impl State {
                 cursor_offset - count..cursor_offset
             }
             Word => {
-                let forward_count = self.count_word_forward();
-                let back_count = self.count_word_back();
-                cursor_offset - back_count..cursor_offset + forward_count
+                let end_count = self.count_word_end();
+                let back_count = self.count_word_start();
+                cursor_offset - back_count..cursor_offset + end_count
             }
             Line => self.current_line(),
             LineRemain => self.current_line_remain(),

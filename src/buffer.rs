@@ -100,6 +100,25 @@ impl Buffer {
         i
     }
 
+    pub(super) fn count_word_start(&self, pos: Position) -> usize {
+        let start = self.get_offset_by_position(pos);
+        let mut chars = self.0.chars_at(start);
+
+        let mut i = 0;
+        chars.next();
+        let c = chars.prev().unwrap();
+        let k = CharKind::from_char(&c);
+
+        while let Some(c) = chars.prev() {
+            if CharKind::from_char(&c) != k {
+                break;
+            }
+            i += 1;
+        }
+
+        i
+    }
+
     pub(super) fn count_back_word(&self, pos: Position) -> usize {
         let start = self.get_offset_by_position(pos);
         let mut chars = self.0.chars_at(start);
