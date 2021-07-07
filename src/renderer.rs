@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
 use crate::compute::{
     Compute, CurrentLine, CursorView, LineRange, MatchPositionsInView, MaxLineDigit, Reactor,
-    RowOffset, SearchPattern, TerminalHeight,
+    RowOffsetView, SearchPattern, TerminalHeight,
 };
 use crate::mode::Mode;
 use crate::position::Position;
@@ -57,7 +57,7 @@ struct CursorProps {
 }
 
 impl Compute for CursorProps {
-    type Source = (CursorView, CurrentLine, MaxLineDigit, RowOffset);
+    type Source = (CursorView, CurrentLine, MaxLineDigit, RowOffsetView);
     fn compute(source: &Self::Source) -> Self {
         Self {
             cursor: source.0 .0,
@@ -207,7 +207,7 @@ impl Renderer {
         write!(
             self.stdout,
             "{}",
-            termion::cursor::Goto(1, props.terminal_height as u16)
+            termion::cursor::Goto(1, props.terminal_height as u16 - 1)
         )
         .unwrap();
         match &props.mode {
@@ -226,7 +226,7 @@ impl Renderer {
                     self.stdout,
                     "{}COMMAND{}:{}",
                     termion::cursor::SteadyBlock,
-                    termion::cursor::Goto(0, props.terminal_height as u16 + 1),
+                    termion::cursor::Goto(0, props.terminal_height as u16),
                     cmd
                 )
                 .unwrap();

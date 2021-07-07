@@ -2,7 +2,7 @@ use crate::buffer::Buffer;
 use crate::mode::Mode;
 use crate::position::Position;
 use crate::state::State;
-use core::cmp::min;
+use core::cmp::{max, min};
 use hashbrown::HashMap;
 use regex::Regex;
 use std::any::{Any, TypeId};
@@ -205,17 +205,17 @@ impl Compute for MaxLineDigit {
 pub(super) struct CurrentLine(pub(super) String);
 
 impl Compute for CurrentLine {
-    type Source = (Buffer, CursorRow);
+    type Source = (Buffer, CursorRowView);
     fn compute(source: &Self::Source) -> Self {
         Self(source.0.line(source.1 .0).as_str().to_string())
     }
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct CursorRow(pub(super) usize);
+pub(super) struct CursorRowView(pub(super) usize);
 
-impl Compute for CursorRow {
-    type Source = Cursor;
+impl Compute for CursorRowView {
+    type Source = CursorView;
     fn compute(source: &Self::Source) -> Self {
         Self(source.0.row)
     }
@@ -236,7 +236,7 @@ pub(super) struct TerminalHeight(pub(super) usize);
 impl Compute for TerminalHeight {
     type Source = State;
     fn compute(source: &Self::Source) -> Self {
-        Self(source.size.1 as usize - 1)
+        Self(source.size.1 as usize)
     }
 }
 
@@ -258,16 +258,43 @@ impl Compute for RowOffset {
 }
 
 #[derive(PartialEq, Clone, Debug)]
+pub(super) struct TextareaHeight(pub(super) usize);
+
+impl Compute for TextareaHeight {
+    type Source = TerminalHeight;
+    fn compute(source: &Self::Source) -> Self {
+        Self(source.0 - 2)
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
+pub(super) struct RowOffsetView(pub(super) usize);
+
+impl Compute for RowOffsetView {
+    type Source = (RowOffset, TextareaHeight, CursorRowView);
+    fn compute(source: &Self::Source) -> Self {
+        let row_offset = source.0 .0;
+        let textarea_height = source.1 .0;
+        let row = source.2 .0;
+
+        Self(max(
+            min(row, row_offset),
+            (row + 1).saturating_sub(textarea_height),
+        ))
+    }
+}
+
+#[derive(PartialEq, Clone, Debug)]
 pub(super) struct LineRange(pub(super) Range<usize>);
 
 impl Compute for LineRange {
-    type Source = (RowOffset, LineCount, TerminalHeight);
+    type Source = (RowOffsetView, LineCount, TextareaHeight);
     fn compute(source: &Self::Source) -> Self {
         let row_offset = source.0 .0;
         let line_count = source.1 .0;
-        let textarea_row = source.2 .0 - 2;
+        let textarea_height = source.2 .0;
 
-        Self(row_offset..min(line_count, textarea_row + row_offset + 1))
+        Self(row_offset..min(line_count, textarea_height + row_offset))
     }
 }
 
