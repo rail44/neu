@@ -40,6 +40,7 @@ pub(super) enum ActionKind {
     Yank(Selection),
     ClearCmd,
     Repeat,
+    Save,
     WriteOut(String),
     Quit,
     GetState(Sender<State>),

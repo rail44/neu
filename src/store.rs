@@ -226,6 +226,13 @@ impl RootStore {
             Quit => {
                 return false;
             }
+            Save => {
+                if let Some(p) = &self.state.path {
+                    let f = File::create(p).unwrap();
+                    let mut w = BufWriter::new(f);
+                    write!(w, "{}", self.state.buffer.as_str()).unwrap();
+                }
+            }
             WriteOut(filename) => {
                 let f = File::create(filename).unwrap();
                 let mut w = BufWriter::new(f);

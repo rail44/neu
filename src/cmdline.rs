@@ -4,7 +4,7 @@ use nom::{
     bytes::complete::tag,
     character::complete::{anychar, space1},
     combinator::map,
-    multi::many0,
+    multi::many1,
     sequence::separated_pair,
     IResult,
 };
@@ -12,8 +12,9 @@ use nom::{
 fn cmdline(input: &str) -> IResult<&str, Action> {
     use ActionKind::*;
     alt((
+        map(tag("w"), |_| Save.once()),
         map(
-            separated_pair(tag("w"), space1, many0(anychar)),
+            separated_pair(tag("w"), space1, many1(anychar)),
             |(_, arg)| WriteOut(arg.iter().collect()).once(),
         ),
         map(tag("q"), |_| Quit.once()),
