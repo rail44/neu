@@ -11,6 +11,7 @@ pub(crate) enum MovementKind {
     ScollScreenUp,
     ScollScreenDown,
     MoveToLineTail,
+    MoveToLineHead,
     MoveToLineIndentHead,
     MoveAsSeenOnView,
     GoToNextMatch,

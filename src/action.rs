@@ -52,13 +52,6 @@ pub(super) enum ActionKind {
 }
 
 impl ActionKind {
-    pub(super) fn edit(k: EditKind) -> Action {
-        Action {
-            count: 1,
-            kind: k.into(),
-        }
-    }
-
     pub(super) fn once(self) -> Action {
         Action {
             count: 1,

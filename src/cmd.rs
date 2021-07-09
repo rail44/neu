@@ -93,10 +93,15 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
 }
 
 fn cmd(input: &str) -> IResult<&str, Action> {
-    map(pair(digit0, action_kind), |(n, kind)| {
-        let count = n.parse().unwrap_or(1);
-        Action { count, kind }
-    })(input)
+    alt((
+        map(tag("0"), |_| {
+            ActionKind::from(MovementKind::MoveToLineHead).once()
+        }),
+        map(pair(digit0, action_kind), |(n, kind)| {
+            let count = n.parse().unwrap_or(1);
+            Action { count, kind }
+        }),
+    ))(input)
 }
 
 pub(super) fn parse(input: &str) -> IResult<&str, Action> {

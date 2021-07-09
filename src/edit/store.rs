@@ -120,7 +120,7 @@ impl<'a> EditStore<'a> {
                 s.push('\n');
             }
             self.root_mut().movement().cursor_down(1);
-            self.root_mut().movement().cursor_line_head();
+            self.root_mut().movement().move_to_line_head();
         }
     }
 

@@ -52,10 +52,6 @@ impl<'a> MovementStore<'a> {
         self.move_col(self.state().cursor.col + count);
     }
 
-    pub(crate) fn cursor_line_head(&mut self) {
-        self.move_col(0);
-    }
-
     pub(crate) fn move_to(&mut self, offset: usize) {
         let result = self.state().buffer.get_position_by_offset(offset);
         self.state_mut().cursor.row = result.row;
@@ -97,6 +93,10 @@ impl<'a> MovementStore<'a> {
             self.state().row_offset,
         );
         self.state_mut().cursor.row = self.state().row_offset;
+    }
+
+    pub(crate) fn move_to_line_head(&mut self) {
+        self.move_col(0);
     }
 
     fn move_to_line_tail(&mut self) {
@@ -182,6 +182,7 @@ impl<'a> MovementStore<'a> {
             MoveToTail => self.move_to_tail(),
             ScollScreenUp => self.scroll_screen_up(),
             ScollScreenDown => self.scroll_screen_down(),
+            MoveToLineHead => self.move_to_line_head(),
             MoveToLineTail => self.move_to_line_tail(),
             MoveToLineIndentHead => self.move_to_line_indent_head(),
             MoveAsSeenOnView => self.move_as_seen_on_view(),
