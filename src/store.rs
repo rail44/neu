@@ -157,7 +157,7 @@ impl RootStore {
                 let mode = mem::replace(&mut self.state.mode, Mode::Normal(String::new()));
 
                 if let Mode::Insert(k, s) = mode {
-                    self.movement().cursor_left(1);
+                    self.movement().left(1);
                     let edit = match k {
                         InsertKind::Insert => EditKind::InsertString(s),
                         InsertKind::Edit(selection) => EditKind::Edit(selection, s),
@@ -172,7 +172,7 @@ impl RootStore {
             IntoAppendMode => {
                 self.history.push(self.create_record());
                 self.action(IntoInsertMode.once());
-                self.movement().cursor_right(1);
+                self.movement().right(1);
             }
             IntoEditMode(selection) => {
                 self.history.push(self.create_record());

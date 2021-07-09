@@ -70,16 +70,16 @@ impl<'a> EditStore<'a> {
             let start = range.start;
             let yank = self.remove(range);
             self.root_mut().action(ActionKind::SetYank(yank).once());
-            self.root_mut().movement().move_to(start);
+            self.root_mut().movement().offset(start);
         }
     }
 
     pub(crate) fn append_yank(&mut self, count: usize) {
         let col = if self.state().yanked.ends_with('\n') {
-            self.root_mut().movement().cursor_down(1);
+            self.root_mut().movement().down(1);
             0
         } else {
-            self.root_mut().movement().cursor_right(1);
+            self.root_mut().movement().right(1);
             self.state().cursor.col
         };
 
@@ -119,8 +119,8 @@ impl<'a> EditStore<'a> {
             if let Mode::Insert(_, s) = &mut self.state_mut().mode {
                 s.push('\n');
             }
-            self.root_mut().movement().cursor_down(1);
-            self.root_mut().movement().move_to_line_head();
+            self.root_mut().movement().down(1);
+            self.root_mut().movement().line_head();
         }
     }
 
@@ -131,7 +131,7 @@ impl<'a> EditStore<'a> {
                 s.push(c);
             }
             self.insert(to, &c.to_string());
-            self.root_mut().movement().cursor_right(1);
+            self.root_mut().movement().right(1);
         }
         self.history_mut().pop();
     }
@@ -140,14 +140,14 @@ impl<'a> EditStore<'a> {
         let to = self.state().get_cursor_offset();
         for _ in 0..count {
             self.insert(to, &s);
-            self.root_mut().movement().cursor_right(s.chars().count());
+            self.root_mut().movement().right(s.chars().count());
         }
     }
 
     pub(crate) fn edit(&mut self, selection: &Selection, s: &str) {
         self.remove_selection(selection, 1);
         self.insert_string(s, 1);
-        self.root_mut().movement().cursor_left(1);
+        self.root_mut().movement().left(1);
     }
 
     pub(crate) fn action(&mut self, edit: EditKind, count: usize) {

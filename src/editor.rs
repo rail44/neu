@@ -126,7 +126,7 @@ impl Editor {
                     match k.unwrap() {
                         Key::Char('\n') => {
                             self.store
-                                .send(ActionKind::from(MovementKind::MoveAsSeenOnView).once())
+                                .send(ActionKind::from(MovementKind::AsSeenOnView).once())
                                 .unwrap();
                             self.store.send(ActionKind::IntoNormalMode.once()).unwrap()
                         }

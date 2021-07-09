@@ -28,11 +28,11 @@ impl<'a> MovementStore<'a> {
         self.state_mut().max_column = col;
     }
 
-    pub(crate) fn cursor_left(&mut self, count: usize) {
+    pub(crate) fn left(&mut self, count: usize) {
         self.move_col(self.state().cursor.col.saturating_sub(count));
     }
 
-    pub(crate) fn cursor_down(&mut self, count: usize) {
+    pub(crate) fn down(&mut self, count: usize) {
         let state = self.state_mut();
         state.cursor.row += count;
         state.cursor.row = min(
@@ -42,17 +42,17 @@ impl<'a> MovementStore<'a> {
         state.cursor.col = state.max_column;
     }
 
-    fn cursor_up(&mut self, count: usize) {
+    fn up(&mut self, count: usize) {
         let state = self.state_mut();
         state.cursor.row = state.cursor.row.saturating_sub(count);
         state.cursor.col = state.max_column;
     }
 
-    pub(crate) fn cursor_right(&mut self, count: usize) {
+    pub(crate) fn right(&mut self, count: usize) {
         self.move_col(self.state().cursor.col + count);
     }
 
-    pub(crate) fn move_to(&mut self, offset: usize) {
+    pub(crate) fn offset(&mut self, offset: usize) {
         let result = self.state().buffer.get_position_by_offset(offset);
         self.state_mut().cursor.row = result.row;
         self.move_col(result.col);
@@ -60,23 +60,23 @@ impl<'a> MovementStore<'a> {
 
     fn forward_word(&mut self, count: usize) {
         let word_offset = self.state().count_word_forward();
-        self.cursor_right(word_offset * count);
+        self.right(word_offset * count);
     }
 
     fn back_word(&mut self, count: usize) {
         let word_offset = self.state().count_word_back();
-        self.cursor_left(word_offset * count);
+        self.left(word_offset * count);
     }
 
-    fn move_line(&mut self, count: usize) {
+    fn line(&mut self, count: usize) {
         self.state_mut().cursor.row = min(count, self.state().buffer.count_lines()) - 1;
     }
 
-    fn move_to_tail(&mut self) {
+    fn tail(&mut self) {
         self.state_mut().cursor.row = self.state().buffer.count_lines() - 1;
     }
 
-    fn scroll_screen_up(&mut self) {
+    fn screen_up(&mut self) {
         let textarea_row = (self.state().size.1 - 2) as usize;
         self.state_mut().row_offset = self.state().row_offset.saturating_sub(textarea_row);
         self.state_mut().cursor.row = min(
@@ -85,7 +85,7 @@ impl<'a> MovementStore<'a> {
         );
     }
 
-    fn scroll_screen_down(&mut self) {
+    fn screen_down(&mut self) {
         let textarea_row = (self.state().size.1 - 2) as usize;
         self.state_mut().row_offset += textarea_row;
         self.state_mut().row_offset = min(
@@ -95,29 +95,29 @@ impl<'a> MovementStore<'a> {
         self.state_mut().cursor.row = self.state().row_offset;
     }
 
-    pub(crate) fn move_to_line_head(&mut self) {
+    pub(crate) fn line_head(&mut self) {
         self.move_col(0);
     }
 
-    fn move_to_line_tail(&mut self) {
-        self.move_to(self.state().current_line().end.saturating_sub(2))
+    fn line_tail(&mut self) {
+        self.offset(self.state().current_line().end.saturating_sub(2))
     }
 
-    fn move_to_line_indent_head(&mut self) {
-        self.move_to(
+    fn indent_head(&mut self) {
+        self.offset(
             self.state()
                 .buffer
                 .current_line_indent_head(self.state().cursor.row),
         )
     }
 
-    fn move_as_seen_on_view(&mut self) {
+    fn as_seen_on_view(&mut self) {
         let pos = self.reactor_mut().compute::<CursorView>().0;
         self.state_mut().cursor.row = pos.row;
         self.state_mut().cursor.col = pos.col;
     }
 
-    fn go_to_next_match(&mut self) {
+    fn next_match(&mut self) {
         let matches = self.reactor_mut().compute::<MatchPositions>().0;
         let cursor = &mut self.state_mut().cursor;
 
@@ -143,7 +143,7 @@ impl<'a> MovementStore<'a> {
         cursor.col = pos.col;
     }
 
-    fn go_to_prev_match(&mut self) {
+    fn prev_match(&mut self) {
         let matches = self.reactor_mut().compute::<MatchPositions>().0;
         let cursor = &mut self.state_mut().cursor;
 
@@ -172,22 +172,22 @@ impl<'a> MovementStore<'a> {
     pub(crate) fn action(&mut self, movement: MovementKind, count: usize) {
         use MovementKind::*;
         match movement {
-            CursorLeft => self.cursor_left(count),
-            CursorDown => self.cursor_down(count),
-            CursorUp => self.cursor_up(count),
-            CursorRight => self.cursor_right(count),
+            Left => self.left(count),
+            Down => self.down(count),
+            Up => self.up(count),
+            Right => self.right(count),
             ForwardWord => self.forward_word(count),
             BackWord => self.back_word(count),
-            MoveLine => self.move_line(count),
-            MoveToTail => self.move_to_tail(),
-            ScollScreenUp => self.scroll_screen_up(),
-            ScollScreenDown => self.scroll_screen_down(),
-            MoveToLineHead => self.move_to_line_head(),
-            MoveToLineTail => self.move_to_line_tail(),
-            MoveToLineIndentHead => self.move_to_line_indent_head(),
-            MoveAsSeenOnView => self.move_as_seen_on_view(),
-            GoToNextMatch => self.go_to_next_match(),
-            GoToPrevMatch => self.go_to_prev_match(),
+            Line => self.line(count),
+            Tail => self.tail(),
+            ScreenUp => self.screen_up(),
+            ScreenDown => self.screen_down(),
+            LineHead => self.line_head(),
+            LineTail => self.line_tail(),
+            IndentHead => self.indent_head(),
+            AsSeenOnView => self.as_seen_on_view(),
+            NextMatch => self.next_match(),
+            PrevMatch => self.prev_match(),
         }
     }
 }

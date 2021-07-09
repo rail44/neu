@@ -1,7 +1,7 @@
 use nom::{
     branch::alt,
     bytes::complete::tag,
-    character::complete::{anychar, digit0},
+    character::complete::{anychar, digit0, digit1},
     combinator::map,
     multi::many_till,
     sequence::pair,
@@ -50,22 +50,21 @@ fn yank(input: &str) -> IResult<&str, ActionKind> {
 
 fn movement_kind(input: &str) -> IResult<&str, MovementKind> {
     alt((
-        map(tag("<C-f>"), |_| MovementKind::ScollScreenDown),
-        map(tag("<C-b>"), |_| MovementKind::ScollScreenUp),
-        map(tag("^"), |_| MovementKind::MoveToLineIndentHead),
-        map(tag("$"), |_| MovementKind::MoveToLineTail),
-        map(tag("gg"), |_| MovementKind::MoveLine),
-        map(tag("G"), |_| MovementKind::MoveToTail),
-        map(alt((tag("h"), tag("<Left>"))), |_| MovementKind::CursorLeft),
-        map(alt((tag("j"), tag("<Down>"))), |_| MovementKind::CursorDown),
-        map(alt((tag("k"), tag("<Up>"))), |_| MovementKind::CursorUp),
-        map(alt((tag("l"), tag("<Right>"))), |_| {
-            MovementKind::CursorRight
-        }),
+        map(tag("<C-f>"), |_| MovementKind::ScreenDown),
+        map(tag("<C-b>"), |_| MovementKind::ScreenUp),
+        map(tag("^"), |_| MovementKind::IndentHead),
+        map(tag("$"), |_| MovementKind::LineTail),
+        map(tag("0"), |_| MovementKind::LineHead),
+        map(tag("gg"), |_| MovementKind::Line),
+        map(tag("G"), |_| MovementKind::Tail),
+        map(alt((tag("h"), tag("<Left>"))), |_| MovementKind::Left),
+        map(alt((tag("j"), tag("<Down>"))), |_| MovementKind::Down),
+        map(alt((tag("k"), tag("<Up>"))), |_| MovementKind::Up),
+        map(alt((tag("l"), tag("<Right>"))), |_| MovementKind::Right),
         map(tag("w"), |_| MovementKind::ForwardWord),
         map(tag("b"), |_| MovementKind::BackWord),
-        map(tag("n"), |_| MovementKind::GoToNextMatch),
-        map(tag("N"), |_| MovementKind::GoToPrevMatch),
+        map(tag("n"), |_| MovementKind::NextMatch),
+        map(tag("N"), |_| MovementKind::PrevMatch),
     ))(input)
 }
 
@@ -94,10 +93,8 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
 
 fn cmd(input: &str) -> IResult<&str, Action> {
     alt((
-        map(tag("0"), |_| {
-            ActionKind::from(MovementKind::MoveToLineHead).once()
-        }),
-        map(pair(digit0, action_kind), |(n, kind)| {
+        map(action_kind, |kind| Action { count: 1, kind }),
+        map(pair(digit1, action_kind), |(n, kind)| {
             let count = n.parse().unwrap_or(1);
             Action { count, kind }
         }),
