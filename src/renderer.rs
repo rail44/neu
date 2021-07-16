@@ -5,6 +5,7 @@ use crate::compute::{
 };
 use crate::mode::Mode;
 use crate::position::Position;
+use crate::state::SearchDirection;
 use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
 use std::ops::Range;
@@ -73,15 +74,17 @@ struct StatusLineProps {
     mode: Mode,
     terminal_height: usize,
     search_pattern: String,
+    search_direction: SearchDirection,
 }
 
 impl Compute for StatusLineProps {
-    type Source = (Mode, TerminalHeight, SearchPattern);
+    type Source = (Mode, TerminalHeight, SearchPattern, SearchDirection);
     fn compute(source: &Self::Source) -> Self {
         Self {
             mode: source.0.clone(),
             terminal_height: source.1 .0,
             search_pattern: source.2 .0.clone(),
+            search_direction: source.3,
         }
     }
 }
@@ -232,11 +235,16 @@ impl Renderer {
                 .unwrap();
             }
             Mode::Search => {
+                let c = match props.search_direction {
+                    SearchDirection::Forward => '/',
+                    SearchDirection::Reverse => '?',
+                };
                 write!(
                     self.stdout,
-                    "{}SEARCH{}/{}",
+                    "{}SEARCH{}{}{}",
                     termion::cursor::SteadyBlock,
                     termion::cursor::Goto(0, props.terminal_height as u16 + 1),
+                    c,
                     props.search_pattern
                 )
                 .unwrap();

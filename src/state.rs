@@ -11,6 +11,18 @@ use crate::selection::{Selection, SelectionKind};
 
 use termion::terminal_size;
 
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub(super) enum SearchDirection {
+    Forward,
+    Reverse,
+}
+
+impl Default for SearchDirection {
+    fn default() -> SearchDirection {
+        SearchDirection::Forward
+    }
+}
+
 #[derive(Default, Clone, Debug, PartialEq)]
 pub(super) struct State {
     pub(super) path: Option<OsString>,
@@ -23,6 +35,7 @@ pub(super) struct State {
     pub(super) buffer: Buffer,
     pub(super) prev_edit: Option<(EditKind, usize)>,
     pub(super) search_pattern: String,
+    pub(super) search_direction: SearchDirection,
 }
 
 impl State {

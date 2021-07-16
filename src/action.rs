@@ -1,5 +1,5 @@
 use crate::selection::Selection;
-use crate::state::State;
+use crate::state::{SearchDirection, State};
 use flume::Sender;
 
 use crate::edit::EditKind;
@@ -30,7 +30,7 @@ pub(super) enum ActionKind {
     IntoInsertMode(Option<MovementKind>),
     IntoNormalMode,
     IntoCmdLineMode,
-    IntoSearchMode,
+    IntoSearchMode(SearchDirection),
     IntoEditMode(Selection),
     SetYank(String),
     PushCmd(char),

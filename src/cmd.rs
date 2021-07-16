@@ -12,6 +12,7 @@ use crate::action::{Action, ActionKind};
 use crate::edit::EditKind;
 use crate::movement::MovementKind;
 use crate::selection::{Selection, SelectionKind};
+use crate::state::SearchDirection;
 
 fn edit(input: &str) -> IResult<&str, ActionKind> {
     use SelectionKind::*;
@@ -85,7 +86,12 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
             ActionKind::IntoInsertMode(Some(MovementKind::IndentHead))
         }),
         map(tag(":"), |_| ActionKind::IntoCmdLineMode),
-        map(tag("/"), |_| ActionKind::IntoSearchMode),
+        map(tag("/"), |_| {
+            ActionKind::IntoSearchMode(SearchDirection::Forward)
+        }),
+        map(tag("?"), |_| {
+            ActionKind::IntoSearchMode(SearchDirection::Reverse)
+        }),
         map(tag("p"), |_| EditKind::AppendYank.into()),
         map(tag("P"), |_| EditKind::InsertYank.into()),
         map(tag("."), |_| ActionKind::Repeat),

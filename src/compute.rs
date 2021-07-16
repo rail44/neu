@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
 use crate::mode::Mode;
 use crate::position::Position;
-use crate::state::State;
+use crate::state::{SearchDirection, State};
 use core::cmp::{max, min};
 use hashbrown::HashMap;
 use regex::Regex;
@@ -369,11 +369,18 @@ impl Compute for MatchPositionsInView {
     }
 }
 
+impl Compute for SearchDirection {
+    type Source = State;
+    fn compute(source: &Self::Source) -> Self {
+        source.search_direction
+    }
+}
+
 #[derive(PartialEq, Clone, Debug)]
 pub(super) struct CursorView(pub(super) Position);
 
 impl Compute for CursorView {
-    type Source = (Cursor, Mode, MatchPositions);
+    type Source = (Cursor, Mode, MatchPositions, SearchDirection);
 
     fn compute(source: &Self::Source) -> Self {
         let cursor = &source.0 .0;
@@ -393,13 +400,25 @@ impl Compute for CursorView {
             });
         }
 
-        for (pos, _) in matches {
-            if pos.row == cursor.row && pos.col >= cursor.col {
-                return CursorView(*pos);
-            }
+        if source.3 == SearchDirection::Forward {
+            for (pos, _) in matches {
+                if pos.row == cursor.row && pos.col >= cursor.col {
+                    return CursorView(*pos);
+                }
 
-            if pos.row > cursor.row {
-                return CursorView(*pos);
+                if pos.row > cursor.row {
+                    return CursorView(*pos);
+                }
+            }
+        } else {
+            for (pos, _) in matches.iter().rev() {
+                if pos.row == cursor.row && pos.col < cursor.col {
+                    return CursorView(*pos);
+                }
+
+                if pos.row < cursor.row {
+                    return CursorView(*pos);
+                }
             }
         }
 

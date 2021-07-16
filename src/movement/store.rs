@@ -1,5 +1,6 @@
 use super::action::MovementKind;
 use crate::compute::{CursorView, MatchPositions};
+use crate::state::SearchDirection;
 use crate::store::{RootStore, Store};
 
 use core::cmp::min;
@@ -117,6 +118,19 @@ impl<'a> MovementStore<'a> {
         self.state_mut().cursor.col = pos.col;
     }
 
+    fn jump_match(&mut self, direction: SearchDirection) {
+        let d = self.state().search_direction;
+        match (d, direction) {
+            (SearchDirection::Forward, SearchDirection::Forward)
+            | (SearchDirection::Reverse, SearchDirection::Reverse) => {
+                self.next_match();
+            }
+            _ => {
+                self.prev_match();
+            }
+        }
+    }
+
     fn next_match(&mut self) {
         let matches = self.reactor_mut().compute::<MatchPositions>().0;
         let cursor = &mut self.state_mut().cursor;
@@ -186,8 +200,8 @@ impl<'a> MovementStore<'a> {
             LineTail => self.line_tail(),
             IndentHead => self.indent_head(),
             AsSeenOnView => self.as_seen_on_view(),
-            NextMatch => self.next_match(),
-            PrevMatch => self.prev_match(),
+            NextMatch => self.jump_match(SearchDirection::Forward),
+            PrevMatch => self.jump_match(SearchDirection::Reverse),
         }
     }
 }

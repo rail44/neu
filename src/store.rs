@@ -180,8 +180,9 @@ impl RootStore {
             IntoCmdLineMode => {
                 self.state.mode = Mode::CmdLine(String::new());
             }
-            IntoSearchMode => {
+            IntoSearchMode(d) => {
                 self.action(ClearSearch.once());
+                self.state.search_direction = d;
                 self.state.mode = Mode::Search;
             }
             SetYank(b) => {
