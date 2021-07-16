@@ -161,7 +161,12 @@ impl<'a> EditStore<'a> {
             InsertYank => self.insert_yank(count),
             LineBreak => self.line_break(count),
             InsertChar(c) => self.insert_char(*c, count),
-            InsertString(_, s) => self.insert_string(s, count),
+            InsertString(m, s) => {
+                if let Some(m) = m {
+                    self.root_mut().movement().action(m.clone(), 1);
+                }
+                self.insert_string(s, count)
+            }
             Edit(selection, s) => self.edit(selection, s),
         };
         self.state_mut().prev_edit = Some((edit, count));

@@ -28,7 +28,7 @@ pub(super) enum ActionKind {
     Movement(MovementKind),
     Edit(EditKind),
     IntoAppendMode,
-    IntoInsertMode,
+    IntoInsertMode(Option<MovementKind>),
     IntoNormalMode,
     IntoCmdLineMode,
     IntoSearchMode,

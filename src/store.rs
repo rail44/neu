@@ -165,13 +165,16 @@ impl RootStore {
                     self.state.prev_edit = Some((edit, 1));
                 }
             }
-            IntoInsertMode => {
+            IntoInsertMode(m) => {
+                if let Some(m) = &m {
+                    self.movement().action(m.clone(), 1);
+                }
                 self.history.push(self.create_record());
-                self.state.mode = Mode::Insert(InsertKind::Insert(None), String::new());
+                self.state.mode = Mode::Insert(InsertKind::Insert(m), String::new());
             }
             IntoAppendMode => {
                 self.history.push(self.create_record());
-                self.action(IntoInsertMode.once());
+                self.action(IntoInsertMode(None).once());
                 self.movement().right(1);
             }
             IntoEditMode(selection) => {

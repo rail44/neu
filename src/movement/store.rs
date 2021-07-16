@@ -100,7 +100,7 @@ impl<'a> MovementStore<'a> {
     }
 
     fn line_tail(&mut self) {
-        self.offset(self.state().current_line().end.saturating_sub(2))
+        self.offset(self.state().current_line().end.saturating_sub(1))
     }
 
     fn indent_head(&mut self) {
