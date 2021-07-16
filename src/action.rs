@@ -27,7 +27,6 @@ pub(super) struct Action {
 pub(super) enum ActionKind {
     Movement(MovementKind),
     Edit(EditKind),
-    IntoAppendMode,
     IntoInsertMode(Option<MovementKind>),
     IntoNormalMode,
     IntoCmdLineMode,

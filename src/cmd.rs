@@ -75,7 +75,9 @@ fn action_kind(input: &str) -> IResult<&str, ActionKind> {
         map(tag("u"), |_| ActionKind::Undo),
         map(tag("<C-r>"), |_| ActionKind::Redo),
         map(tag("i"), |_| ActionKind::IntoInsertMode(None)),
-        map(tag("a"), |_| ActionKind::IntoAppendMode),
+        map(tag("a"), |_| {
+            ActionKind::IntoInsertMode(Some(MovementKind::Right))
+        }),
         map(tag("A"), |_| {
             ActionKind::IntoInsertMode(Some(MovementKind::LineTail))
         }),
