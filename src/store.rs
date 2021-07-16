@@ -159,7 +159,7 @@ impl RootStore {
                 if let Mode::Insert(k, s) = mode {
                     self.movement().left(1);
                     let edit = match k {
-                        InsertKind::Insert => EditKind::InsertString(s),
+                        InsertKind::Insert(p) => EditKind::InsertString(p, s),
                         InsertKind::Edit(selection) => EditKind::Edit(selection, s),
                     };
                     self.state.prev_edit = Some((edit, 1));
@@ -167,7 +167,7 @@ impl RootStore {
             }
             IntoInsertMode => {
                 self.history.push(self.create_record());
-                self.state.mode = Mode::Insert(InsertKind::Insert, String::new());
+                self.state.mode = Mode::Insert(InsertKind::Insert(None), String::new());
             }
             IntoAppendMode => {
                 self.history.push(self.create_record());

@@ -1,3 +1,4 @@
+use crate::movement::MovementKind;
 use crate::selection::Selection;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -8,6 +9,6 @@ pub(crate) enum EditKind {
     RemoveSelection(Selection),
     AppendYank,
     InsertYank,
-    InsertString(String),
+    InsertString(Option<MovementKind>, String),
     Edit(Selection, String),
 }

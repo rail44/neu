@@ -1,3 +1,4 @@
+use crate::movement::MovementKind;
 use crate::selection::Selection;
 
 #[derive(Clone, Debug, PartialEq)]
@@ -10,7 +11,7 @@ pub(super) enum Mode {
 
 #[derive(Clone, Debug, PartialEq)]
 pub(super) enum InsertKind {
-    Insert,
+    Insert(Option<MovementKind>),
     Edit(Selection),
 }
 
