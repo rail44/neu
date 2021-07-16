@@ -15,7 +15,7 @@ enum CharKind {
 impl CharKind {
     fn from_char(c: &char) -> Self {
         use CharKind::*;
-        if c.is_ascii_alphanumeric() {
+        if c == &'_' || c.is_ascii_alphanumeric() {
             return AlphaNumeric;
         }
 
