@@ -15,7 +15,13 @@ jobs:
 
     steps:
     - uses: actions/checkout@v2
+    - name: apt
+      run: |
+        sudo apt update
+        sudo apt install -y musl-tools
+    - name: rustup
+      run: rustup target add x86_64-unknown-linux-musl
+    - name: build
+      run: cargo build --verbose --release --target x86_64-unknown-linux-musl
     - name: test
       run: cargo test --verbose
-    - name: build
-      run: cargo build --verbose --release
