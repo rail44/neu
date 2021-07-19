@@ -3,16 +3,13 @@ name: rust
 on:
   push:
     branches: [ master ]
-  pull_request:
-    branches: [ master ]
-
+    
 env:
   CARGO_TERM_COLOR: always
 
 jobs:
   build:
     runs-on: ubuntu-latest
-
     steps:
     - uses: actions/checkout@v2
     - name: apt
@@ -30,4 +27,5 @@ jobs:
       run: cargo test --verbose
     - uses: actions/upload-artifact@v2.2.4
       with:
+        name: neu-x86_64-linux.xz
         path: neu-x86_64-linux.xz
