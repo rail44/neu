@@ -23,9 +23,8 @@ jobs:
         cargo build --verbose --release --target x86_64-unknown-linux-musl
         cp target/x86_64-unknown-linux-musl/release/neu neu-x86_64-linux
         xz neu-x86_64-linux
-    - name: test
-      run: cargo test --verbose
-    - uses: actions/upload-artifact@v2.2.4
+    - uses: softprops/action-gh-release@v0.1.5
       with:
-        name: neu-x86_64-linux.xz
-        path: neu-x86_64-linux.xz
+        name: nightly
+        prerelease: true
+        files: neu-x86_64-linux.xz
