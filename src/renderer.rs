@@ -5,6 +5,7 @@ use crate::compute::{
 };
 use crate::mode::Mode;
 use crate::position::Position;
+use crate::search::Match;
 use crate::state::SearchDirection;
 use core::cmp::min;
 use std::io::{stdout, BufWriter, Stdout, Write};
@@ -18,7 +19,7 @@ struct TextAreaProps {
     line_range: Range<usize>,
     buffer: Buffer,
     max_line_digit: usize,
-    match_positions: Vec<(Position, usize)>,
+    matches: Vec<Match>,
 }
 
 impl Compute for TextAreaProps {
@@ -28,7 +29,7 @@ impl Compute for TextAreaProps {
             line_range: source.0 .0.clone(),
             buffer: source.1.clone(),
             max_line_digit: source.2 .0,
-            match_positions: source.3 .0.clone(),
+            matches: source.3 .0.clone(),
         }
     }
 }
@@ -171,8 +172,10 @@ impl Renderer {
             }
         }
 
-        let match_positions = props.match_positions;
-        for (position, length) in match_positions {
+        let matches = props.matches;
+        for m in matches {
+            let position = m.pos;
+            let length = m.len;
             let line = props.buffer.line(position.row + props.line_range.start);
             let s: String = line.chars().take(position.col + length).collect();
             let width = UnicodeWidthStr::width(&s[..min(s.len() - 1, position.col)]);

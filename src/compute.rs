@@ -1,6 +1,8 @@
 use crate::buffer::Buffer;
 use crate::mode::Mode;
 use crate::position::Position;
+use crate::search;
+use crate::search::Match;
 use crate::state::{SearchDirection, State};
 use core::cmp::{max, min};
 use hashbrown::HashMap;
@@ -309,7 +311,7 @@ impl Compute for SearchPattern {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct MatchPositions(pub(super) Vec<(Position, usize)>);
+pub(super) struct MatchPositions(pub(super) Vec<Match>);
 
 impl Compute for MatchPositions {
     type Source = (SearchPattern, Buffer);
@@ -329,7 +331,7 @@ impl Compute for MatchPositions {
                 let range = m.range();
                 let start_position = source.1.get_cursor_by_byte(range.start);
                 let end_position = source.1.get_cursor_by_byte(range.end);
-                (
+                Match::new(
                     Position {
                         row: start_position.row,
                         col: start_position.col,
@@ -343,26 +345,27 @@ impl Compute for MatchPositions {
 }
 
 #[derive(PartialEq, Clone, Debug)]
-pub(super) struct MatchPositionsInView(pub(super) Vec<(Position, usize)>);
+pub(super) struct MatchPositionsInView(pub(super) Vec<Match>);
 
 impl Compute for MatchPositionsInView {
     type Source = (MatchPositions, LineRange);
     fn compute(source: &Self::Source) -> Self {
         let mut result = Vec::new();
         let line_range = &source.1 .0;
-        for (pos, l) in &source.0 .0 {
-            if line_range.start > pos.row {
+        for m in &source.0 .0 {
+            if line_range.start > m.pos.row {
                 continue;
             }
-            if line_range.end <= pos.row {
+            if line_range.end <= m.pos.row {
                 break;
             }
-            result.push((
+            // FIXME: make it actual position
+            result.push(Match::new(
                 Position {
-                    row: pos.row - line_range.start,
-                    col: pos.col,
+                    row: m.pos.row - line_range.start,
+                    col: m.pos.col,
                 },
-                *l,
+                m.len,
             ));
         }
         Self(result)
@@ -401,28 +404,8 @@ impl Compute for CursorView {
         }
 
         if source.3 == SearchDirection::Forward {
-            for (pos, _) in matches {
-                if pos.row == cursor.row && pos.col >= cursor.col {
-                    return CursorView(*pos);
-                }
-
-                if pos.row > cursor.row {
-                    return CursorView(*pos);
-                }
-            }
-        } else {
-            for (pos, _) in matches.iter().rev() {
-                if pos.row == cursor.row && pos.col < cursor.col {
-                    return CursorView(*pos);
-                }
-
-                if pos.row < cursor.row {
-                    return CursorView(*pos);
-                }
-            }
+            return CursorView(*search::get_next(cursor, matches));
         }
-
-        let pos = matches.first().unwrap().0;
-        CursorView(pos)
+        CursorView(*search::get_prev(cursor, matches))
     }
 }

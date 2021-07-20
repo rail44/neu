@@ -22,6 +22,7 @@ mod mode;
 mod movement;
 mod position;
 mod renderer;
+mod search;
 mod selection;
 mod state;
 mod store;

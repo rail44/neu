@@ -1,5 +1,6 @@
 use super::action::MovementKind;
 use crate::compute::{CursorView, MatchPositions};
+use crate::search;
 use crate::state::SearchDirection;
 use crate::store::{RootStore, Store};
 
@@ -133,54 +134,19 @@ impl<'a> MovementStore<'a> {
 
     fn next_match(&mut self) {
         let matches = self.reactor_mut().compute::<MatchPositions>().0;
+
+        self.right(1);
         let cursor = &mut self.state_mut().cursor;
-
-        if matches.is_empty() {
-            return;
-        }
-
-        for (pos, _) in &matches {
-            if pos.row == cursor.row && pos.col > cursor.col {
-                cursor.row = pos.row;
-                cursor.col = pos.col;
-                return;
-            }
-
-            if pos.row > cursor.row {
-                cursor.row = pos.row;
-                cursor.col = pos.col;
-                return;
-            }
-        }
-        let pos = matches.first().unwrap().0;
-        cursor.row = pos.row;
-        cursor.col = pos.col;
+        let pos = search::get_next(cursor, &matches);
+        *cursor = *pos;
     }
 
     fn prev_match(&mut self) {
         let matches = self.reactor_mut().compute::<MatchPositions>().0;
         let cursor = &mut self.state_mut().cursor;
 
-        if matches.is_empty() {
-            return;
-        }
-
-        for (pos, _) in matches.iter().rev() {
-            if pos.row == cursor.row && pos.col < cursor.col {
-                cursor.row = pos.row;
-                cursor.col = pos.col;
-                return;
-            }
-
-            if pos.row < cursor.row {
-                cursor.row = pos.row;
-                cursor.col = pos.col;
-                return;
-            }
-        }
-        let pos = matches.last().unwrap().0;
-        cursor.row = pos.row;
-        cursor.col = pos.col;
+        let pos = search::get_prev(cursor, &matches);
+        *cursor = *pos;
     }
 
     pub(crate) fn action(&mut self, movement: MovementKind, count: usize) {
