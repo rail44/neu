@@ -1,8 +1,9 @@
 name: rust
 
 on:
-  release:
-    types: [published]
+  push:
+    tags:
+      - nightly
     
 env:
   CARGO_TERM_COLOR: always
