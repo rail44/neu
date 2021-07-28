@@ -9,7 +9,7 @@ env:
   CARGO_TERM_COLOR: always
 
 jobs:
-  build:
+  build-linux:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
@@ -29,3 +29,17 @@ jobs:
         name: nightly
         prerelease: true
         files: neu-x86_64-linux.xz
+  build-macos:
+    runs-on: macos-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: build
+      run: |
+        cargo build --verbose --release
+        cp target/release/neu neu-x86_64-macos
+        xz neu-x86_64-macos
+    - uses: softprops/action-gh-release@v0.1.7
+      with:
+        name: nightly
+        prerelease: true
+        files: neu-x86_64-macos.xz
