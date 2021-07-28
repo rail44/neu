@@ -23,7 +23,7 @@ jobs:
         cargo build --verbose --release --target x86_64-unknown-linux-musl
         cp target/x86_64-unknown-linux-musl/release/neu neu-x86_64-linux
         xz neu-x86_64-linux
-    - uses: softprops/action-gh-release@v0.1.5
+    - uses: softprops/action-gh-release@v0.1.7
       with:
         name: nightly
         prerelease: true
