@@ -197,16 +197,30 @@ impl Renderer {
     fn render_line_number(&mut self, props: LineNumberProps) {
         let max_line_digit = props.max_line_digit;
         let line_range = props.line_range;
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::color::Bg(termion::color::LightGreen),
+            termion::color::Fg(termion::color::LightBlue),
+        )
+        .unwrap();
         for (i, line_index) in line_range.enumerate() {
-            write!(self.stdout, "{}", termion::cursor::Goto(1, i as u16 + 1)).unwrap();
             write!(
                 self.stdout,
-                "{:max_line_digit$}",
+                "{}{:max_line_digit$}",
+                termion::cursor::Goto(1, i as u16 + 1),
                 line_index + 1,
                 max_line_digit = max_line_digit
             )
             .unwrap();
         }
+        write!(
+            self.stdout,
+            "{}{}",
+            termion::color::Bg(termion::color::Reset),
+            termion::color::Fg(termion::color::Reset),
+        )
+        .unwrap();
     }
 
     fn render_status_line(&mut self, props: StatusLineProps) {
