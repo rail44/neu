@@ -127,16 +127,16 @@ impl Highlighter {
             unreachable!()
         });
 
-        let highlighted = 0;
         let mut result = Vec::new();
         for matched in matches {
             for capture in matched.0.captures {
                 let start = capture.node.start_byte();
-                if highlighted > start {
+                let position = capture.node.start_position();
+                if line_range.0.start > position.row {
                     break;
                 }
 
-                let position = capture.node.start_position();
+
                 let end = capture.node.end_byte();
                 let syntax_kind = &query.capture_names()[capture.index as usize];
 
