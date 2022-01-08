@@ -1,7 +1,7 @@
 use crate::buffer::Buffer;
 use crate::compute::{LineRange, Reactor};
 use crate::language::Language;
-use tree_sitter::{InputEdit, Language as TSLanguage, Parser, Point, Query, Tree};
+use tree_sitter::{InputEdit, Language as TSLanguage, Node, Parser, Point, Query, Tree};
 
 fn get_language_info(lang: &Language) -> Option<(TSLanguage, Query)> {
     use Language::*;
@@ -115,14 +115,17 @@ impl Highlighter {
 
         let mut c = tree_sitter::QueryCursor::new();
         let line_range: LineRange = reactor.compute();
-        c.set_point_range(
-            Point::new(line_range.0.start, 0),
-            Point::new(line_range.0.end, 0),
-        );
+        c.set_point_range(Point::new(line_range.0.start, 0)..Point::new(line_range.0.end, 0));
         let syntax_tree = self.tree.as_mut().unwrap().root_node();
 
         let query = self.query.as_mut().unwrap();
-        let matches = c.captures(query, syntax_tree, |_| &[]);
+        let matches = c.captures(query, syntax_tree, |node: Node| {
+            let start = node.start_byte();
+            if let Some((chunks, _, _, _)) = b.get_chunks_at_byte(start) {
+                return chunks.map(|s| s.as_bytes());
+            }
+            unreachable!()
+        });
 
         let highlighted = 0;
         let mut result = Vec::new();
