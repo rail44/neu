@@ -4,7 +4,7 @@ use std::panic;
 use std::sync::Arc;
 
 use backtrace::Backtrace;
-use clap::{crate_authors, crate_version, Clap};
+use clap::Parser;
 use dirs::home_dir;
 
 mod action;
@@ -31,8 +31,8 @@ use crate::editor::Editor;
 use crate::renderer::Renderer;
 use crate::store::RootStore;
 
-#[derive(Clap)]
-#[clap(version = crate_version!(), author = crate_authors!())]
+#[derive(Parser)]
+#[clap(version, author)]
 struct Opts {
     filename: Option<String>,
 }
