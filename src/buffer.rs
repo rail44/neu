@@ -2,7 +2,7 @@ use crate::position::Position;
 use core::ops::{Range, RangeBounds};
 use std::borrow::Cow;
 
-use ropey::{Rope, RopeSlice};
+use ropey::{iter::Chunks, Rope, RopeSlice};
 
 #[derive(PartialEq, Clone, Debug)]
 enum CharKind {
@@ -31,7 +31,7 @@ impl CharKind {
 }
 
 #[derive(Default, Clone, Debug, PartialEq)]
-pub(super) struct Buffer(Rope);
+pub(super) struct Buffer(pub Rope);
 
 impl Buffer {
     pub(super) fn get_offset_by_position(&self, pos: Position) -> usize {
@@ -209,6 +209,10 @@ impl Buffer {
 
     pub(super) fn get_chunk_at_byte(&self, i: usize) -> Option<(&str, usize, usize, usize)> {
         self.0.get_chunk_at_byte(i)
+    }
+
+    pub(super) fn get_chunks_at_byte(&self, i: usize) -> Option<(Chunks, usize, usize, usize)> {
+        self.0.get_chunks_at_byte(i)
     }
 
     pub(super) fn bytes_at(&self, i: usize) -> impl Iterator<Item = u8> + '_ {
